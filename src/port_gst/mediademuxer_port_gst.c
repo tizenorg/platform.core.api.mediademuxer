@@ -623,20 +623,15 @@ int _gst_set_appsink(track *temp, int index, int loop)
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
 	int count = 0;
-	if (index >= loop && index < 0)
-		goto ERROR;
+
 	while (count != index) {
 		temp = temp->next;
 		count++;
 	}
 	gst_app_sink_set_max_buffers((GstAppSink *)(temp->appsink), (guint) MAX_APP_BUFFER);
 	gst_app_sink_set_drop((GstAppSink *)(temp->appsink), false);
-
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	MEDIADEMUXER_FLEAVE();
-	return MD_ERROR;
 }
 
 static int gst_demuxer_set_track(MMHandleType pHandle, int track)
@@ -646,7 +641,9 @@ static int gst_demuxer_set_track(MMHandleType pHandle, int track)
 	MEDIADEMUXER_CHECK_NULL(pHandle);
 	mdgst_handle_t *new_mediademuxer = (mdgst_handle_t *) pHandle;
 
+	MD_I("total_tracks (%d) :: selected  track (%d)", new_mediademuxer->total_tracks, track);
 	if (track >= new_mediademuxer->total_tracks || track < 0) {
+		MD_E("total_tracks is less then selected track, So not support this track");
 		goto ERROR;
 	}
 	new_mediademuxer->selected_tracks[track] = true;
@@ -721,8 +718,7 @@ int _set_mime_video(media_format_h format, track *head)
 		goto ERROR;
 	}
 	if (gst_structure_has_name(struc, "video/x-h264")) {
-		const gchar *version =
-		    gst_structure_get_string(struc, "stream-format");
+		const gchar *version = gst_structure_get_string(struc, "stream-format");
 		if (strncmp(version, "avc", 3) == 0) {
 			gst_structure_get_int(struc, "width", &src_width);
 			gst_structure_get_int(struc, "height", &src_height);
@@ -752,6 +748,8 @@ int _set_mime_audio(media_format_h format, track *head)
 	int rate = 0;
 	int channels = 0;
 	int id3_flag = 0;
+	const gchar *stream_format;
+
 	struc = gst_caps_get_structure(head->caps, 0);
 	if (!struc) {
 		MD_E("cannot get structure from caps.\n");
@@ -768,6 +766,7 @@ int _set_mime_audio(media_format_h format, track *head)
 		if (mpegversion == 4 || mpegversion == 2 ) {
 			gst_structure_get_int(struc, "channels", &channels);
 			gst_structure_get_int(struc, "rate", &rate);
+			stream_format = gst_structure_get_string(struc, "stream-format");
 			if (media_format_set_audio_mime(format, MEDIA_FORMAT_AAC_LC))
 				goto ERROR;
 			if(channels == 0)
@@ -780,6 +779,10 @@ int _set_mime_audio(media_format_h format, track *head)
 				goto ERROR;
 			if (media_format_set_audio_bit(format, 0))
 				goto ERROR;
+			if (strncmp(stream_format, "adts", 4) == 0)
+				media_format_set_audio_aac_type(format, 1);
+			else
+				media_format_set_audio_aac_type(format, 0);
 		}
 		if (mpegversion == 1 || id3_flag ) {
 			gst_structure_get_int(struc, "layer", &layer);
@@ -855,8 +858,10 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 	       (new_mediademuxer->info).num_audio_track +
 	       (new_mediademuxer->info).num_subtitle_track +
 	       (new_mediademuxer->info).num_other_track;
-	if (index >= loop && index < 0)
+	if (index >= loop || index < 0) {
+		MD_E("total tracks(loop) is less then selected track(index), So not support this track");
 		goto ERROR;
+	}
 
 	ret = media_format_create(format);
 	if(ret != MEDIA_FORMAT_ERROR_NONE){
@@ -985,11 +990,13 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 			ret = MD_ERROR;
 			goto ERROR;
 		}
+
 		if (media_format_set_audio_mime(mediafmt, MEDIA_FORMAT_AAC)) {
 			MD_E("media_format_set_audio_mime failed\n");
 			ret = MD_ERROR;
 			goto ERROR;
 		}
+
 		if (media_packet_create_alloc(mediafmt, NULL, NULL, &mediabuf)) {
 			MD_E("media_packet_create_alloc failed\n");
 			ret = MD_ERROR;
@@ -1002,6 +1009,7 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 			ret = MD_ERROR;
 			goto ERROR;
 		}
+
 		if (media_format_set_video_mime(mediafmt, MEDIA_FORMAT_H264_SP)) {
 			MD_E("media_format_set_ivideo_mime failed\n");
 			ret = MD_ERROR;
@@ -1120,8 +1128,7 @@ int _gst_unset_appsink(track *temp, int index, int loop)
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
 	int count = 0;
-	if (index >= loop && index < 0)
-		goto ERROR;
+
 	while (count != index) {
 		temp = temp->next;
 		count++;
@@ -1130,9 +1137,6 @@ int _gst_unset_appsink(track *temp, int index, int loop)
 	gst_app_sink_set_drop((GstAppSink *)(temp->appsink), true);
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	MEDIADEMUXER_FLEAVE();
-	return MD_ERROR;
 }
 
 static int gst_demuxer_unset_track(MMHandleType pHandle, int track)
@@ -1143,6 +1147,7 @@ static int gst_demuxer_unset_track(MMHandleType pHandle, int track)
 	mdgst_handle_t *new_mediademuxer = (mdgst_handle_t *) pHandle;
 
 	if (track >= new_mediademuxer->total_tracks || track < 0) {
+		MD_E("total tracks is less then unselected track, So not support this track");
 		goto ERROR;
 	}
 	new_mediademuxer->selected_tracks[track] = false;
@@ -1251,7 +1256,7 @@ int gst_set_error_cb(MMHandleType pHandle,
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) pHandle;
 
 	if (!gst_handle) {
-		MD_E("fail invaild param\n");
+		MD_E("fail invaild param (gst_handle)\n");
 		ret = MD_INVALID_ARG;
 		goto ERROR;
 	}
@@ -1263,6 +1268,7 @@ int gst_set_error_cb(MMHandleType pHandle,
 	}
 	else {
 		if (!callback) {
+			MD_E("fail invaild argument (callback)\n");
 			ret = MD_ERROR_INVALID_ARGUMENT;
 			goto ERROR;
 		}
