@@ -22,6 +22,7 @@
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include <glib.h>
 #include <mm_error.h>
 #include <mm_debug.h>
@@ -316,7 +317,7 @@ void *_fetch_audio_data(void *ptr)
 		count++;
 		media_packet_get_buffer_size(audbuf, &buf_size);
 		media_packet_get_buffer_data_ptr(audbuf, &data);
-		g_print("Audio Read Count::[%4d] frame - get_buffer_size = %lld\n", count, buf_size);
+		g_print("Audio Read Count::[%4d] frame - get_buffer_size = %"PRIu64"\n", count, buf_size);
 
 #if DEMUXER_OUTPUT_DUMP
 		if ((a_mime == MEDIA_FORMAT_AAC_LC) && (is_adts == 0)) {
@@ -370,7 +371,7 @@ void *_fetch_video_data(void *ptr)
 		count++;
 		media_packet_get_buffer_size(vidbuf, &buf_size);
 		media_packet_get_buffer_data_ptr(vidbuf, &data);
-		g_print("Video Read Count::[%4d] frame - get_buffer_size = %lld\n", count, buf_size);
+		g_print("Video Read Count::[%4d] frame - get_buffer_size = %"PRIu64"\n", count, buf_size);
 
 #if DEMUXER_OUTPUT_DUMP
 		if (data != NULL)

@@ -127,8 +127,7 @@ int __md_util_exist_file_path(const char *file_path)
 		MEDIADEMUXER_FLEAVE();
 		return MD_ERROR_FILE_NOT_FOUND;
 	} else {
-		MD_E("file size : %lld bytes\n",
-		     (long long)stat_results.st_size);
+		MD_E("file size : %lld bytes\n", (long long)stat_results.st_size);
 	}
 	close(fd);
 	MEDIADEMUXER_FLEAVE();
