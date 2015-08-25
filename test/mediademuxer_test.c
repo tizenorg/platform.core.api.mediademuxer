@@ -30,6 +30,7 @@
 #include <mediademuxer.h>
 #include <media_format.h>
 #include <media_packet.h>
+#include <media_codec.h>
 
 /*-----------------------------------------------------------------------
 |    GLOBAL CONSTANT DEFINITIONS:                                       |
@@ -58,6 +59,7 @@ int w;
 int h;
 int channel = 0;
 int samplerate = 0;
+int bit = 0;
 bool is_adts = 0;
 
 /*-----------------------------------------------------------------------
@@ -121,6 +123,12 @@ static const char AMRWB_HDR [] = "#!AMR-WB\n";
 int write_amrnb_header = 0;             /* write  magic number for AMR-NB Header at one time */
 int write_amrwb_header = 0;             /* write  magic number for AMR-WB Header at one time */
 #endif
+
+bool validate_with_codec = false;
+mediacodec_h g_media_codec = NULL;
+FILE *fp_out_codec_audio = NULL;
+mediacodec_h g_media_codec_1 = NULL;
+FILE *fp_out_codec_video = NULL;
 
 /*-----------------------------------------------------------------------
 |    HELPER  FUNCTION                                                                 |
@@ -254,14 +262,14 @@ int test_mediademuxer_get_track_info()
 						                v_mime, w, h);
 						vid_track = track;
 					} else if (media_format_get_audio_info(g_media_format[track], &a_mime,
-					            &channel, &samplerate, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+					            &channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
 						g_print("media_format_get_audio_info is sucess!\n");
-						g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d\n",
-						                a_mime, channel, samplerate);
+						g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
+						                a_mime, channel, samplerate, bit);
 						media_format_get_audio_aac_type(g_media_format[track], &is_adts);
 						aud_track = track;
 					} else {
-						g_print("Not Supported YET");
+						g_print("Not Supported YET\n");
 					}
 				} else {
 					g_print("Error while getting mediademuxer_get_track_info\n");
@@ -294,6 +302,98 @@ int test_mediademuxer_get_track_info()
 	return ret;
 }
 
+static void mediacodec_finish(mediacodec_h handle, FILE *fp)
+{
+	int err = 0;
+	fclose(fp);
+	mediacodec_unset_output_buffer_available_cb(handle);
+	err = mediacodec_unprepare(handle);
+	if (err != MEDIACODEC_ERROR_NONE) {
+		g_print("mediacodec_unprepare failed error = %d \n", err);
+		return;
+	}
+	err = mediacodec_destroy(handle);
+	if (err != MEDIACODEC_ERROR_NONE) {
+		g_print("mediacodec_destory failed error = %d \n", err);
+	}
+	return;
+}
+
+static void _mediacodec_fill_audio_buffer_cb(media_packet_h pkt, void *user_data)
+{
+	int err = 0;
+	uint64_t buf_size = 0;
+	void *data = NULL;
+	media_packet_h output_buf;
+
+	if (pkt != NULL) {
+		err = mediacodec_get_output(g_media_codec, &output_buf, 0);
+		if (err == MEDIACODEC_ERROR_NONE) {
+			media_packet_get_buffer_size(output_buf, &buf_size);
+			media_packet_get_buffer_data_ptr(output_buf, &data);
+			if (data != NULL) {
+				fwrite(data, 1, buf_size, fp_out_codec_audio);
+			} else {
+				g_print("Data is null inside _mediacodec_fill_audio_buffer_cb\n");
+			}
+
+			media_packet_destroy(output_buf);
+		} else {
+			g_print("mediacodec_get_output failed inside _mediacodec_fill_audio_buffer_cb err = %d\n", err);
+			return;
+		}
+	} else {
+		g_print("audio pkt from mediacodec is null\n");
+	}
+	return;
+}
+
+static void mediacodec_init_audio(int codecid, int flag, int samplerate, int channel, int bit)
+{
+	/* This file  will be used to dump the audio data coming out from mediacodec */
+	fp_out_codec_audio = fopen("/opt/usr/media/codec_dump_audio.out", "wb");
+	if (g_media_codec != NULL) {
+		mediacodec_unprepare(g_media_codec);
+		mediacodec_destroy(g_media_codec);
+		g_media_codec = NULL;
+	}
+	if (mediacodec_create(&g_media_codec) != MEDIACODEC_ERROR_NONE)	{
+		g_print("mediacodec_create is failed\n");
+		return;
+	}
+	/* Now set the code info */
+	if ((mediacodec_set_codec(g_media_codec, (mediacodec_codec_type_e)codecid,
+		(mediacodec_support_type_e)flag) != MEDIACODEC_ERROR_NONE)) {
+		g_print("mediacodec_set_codec is failed\n");
+		return;
+	}
+	/* set the audio dec info */
+	if ((mediacodec_set_adec_info(g_media_codec, samplerate, channel, bit))!= MEDIACODEC_ERROR_NONE) {
+		g_print("mediacodec_set_adec is failed\n");
+		return;
+	}
+	/* Set the callback for output data, which will be used to write the data to file */
+	mediacodec_set_output_buffer_available_cb(g_media_codec,
+											_mediacodec_fill_audio_buffer_cb,
+											g_media_codec);
+
+	if (MEDIACODEC_ERROR_NONE !=  mediacodec_prepare(g_media_codec)) {
+		g_print("mediacodec prepare is failed\n");
+		return;
+	}
+}
+
+static void mediacodec_process_audio_pkt(media_packet_h in_buf)
+{
+	if (g_media_codec != NULL) {
+		/* process the media packet */
+		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input (g_media_codec, in_buf, 0)) {
+			g_print("mediacodec_process_input is failed inside mediacodec_process_audio_pkt\n");
+			return;
+		}
+	}
+}
+
 void *_fetch_audio_data(void *ptr)
 {
 	int ret = MD_ERROR_NONE;
@@ -305,6 +405,18 @@ void *_fetch_audio_data(void *ptr)
 
 	*status = -1;
 	g_print("Audio Data function\n");
+
+	if (validate_with_codec) {
+		int flag = 0;
+		if (a_mime == MEDIA_FORMAT_AAC_LC || a_mime == MEDIA_FORMAT_AAC_HE ||
+			a_mime == MEDIA_FORMAT_AAC_HE_PS) {
+			flag = 10;
+			mediacodec_init_audio(MEDIACODEC_AAC, flag, samplerate, channel, bit);
+		} else {
+			g_print("Not Supported YET- Need to add mime for validating with audio codec\n");
+			return (void *)status;
+		}
+	}
 	while (1) {
 		ret = mediademuxer_read_sample(demuxer, aud_track, &audbuf);
 		if (ret == MD_EOS) {
@@ -341,12 +453,114 @@ void *_fetch_audio_data(void *ptr)
 		else
 			g_print("DUMP : write(audio data) fail for NULL\n");
 #endif
-		media_packet_destroy(audbuf);
+
+		if (validate_with_codec)
+			mediacodec_process_audio_pkt(audbuf);
+		else
+			media_packet_destroy(audbuf);
 	}
 
 	*status = 0;
+	if (validate_with_codec)
+		mediacodec_finish(g_media_codec, fp_out_codec_audio);
 	return (void *)status;
 }
+
+static void _mediacodec_fill_video_buffer_cb(media_packet_h pkt, void *user_data)
+{
+	int err = 0;
+	uint64_t buf_size = 0;
+	void *data = NULL;
+	media_packet_h output_buf;
+
+	if (pkt != NULL) {
+		err = mediacodec_get_output(g_media_codec_1, &output_buf, 0);
+		if (err == MEDIACODEC_ERROR_NONE) {
+			media_packet_get_buffer_size(output_buf, &buf_size);
+			//g_print("%s - output_buf size = %lld\n",__func__, buf_size);
+			media_packet_get_buffer_data_ptr(output_buf, &data);
+			if (data != NULL) {
+				fwrite(data, 1, buf_size, fp_out_codec_video);
+			} else {
+				g_print("Data is null inside _mediacodec_fill_video_buffer_cb\n");
+			}
+			media_packet_destroy(output_buf);
+		} else {
+			g_print("mediacodec_get_output failed inside _mediacodec_fill_video_buffer_cb lerr = %d\n", err);
+			return;
+		}
+	} else {
+		g_print("video pkt from mediacodec is null\n");
+	}
+	return;
+}
+
+static void mediacodec_init_video(int codecid, int flag, int width, int height)
+{
+	/* This file  will be used to dump the data */
+	fp_out_codec_video = fopen("/opt/usr/media/codec_dump_video.out", "wb");
+	if (g_media_codec_1 != NULL) {
+		mediacodec_unprepare(g_media_codec_1);
+		mediacodec_destroy(g_media_codec_1);
+		g_media_codec_1 = NULL;
+	}
+	if (mediacodec_create(&g_media_codec_1) != MEDIACODEC_ERROR_NONE) {
+		g_print("mediacodec_create is failed\n");
+		return;
+	}
+	/* Now set the code info */
+	if ((mediacodec_set_codec(g_media_codec_1, (mediacodec_codec_type_e)codecid,
+		(mediacodec_support_type_e)flag) != MEDIACODEC_ERROR_NONE)) {
+		g_print("mediacodec_set_codec is failed\n");
+		return;
+	}
+	/* set the video dec info */
+	if ((mediacodec_set_vdec_info(g_media_codec_1, width, height)) != MEDIACODEC_ERROR_NONE) {
+		g_print("mediacodec_set_vdec is failed\n");
+		return;
+	}
+	/* Set the callback for output data, which will be used to write the data to file */
+	mediacodec_set_output_buffer_available_cb(g_media_codec_1,
+											_mediacodec_fill_video_buffer_cb,
+											g_media_codec_1);
+
+	if (MEDIACODEC_ERROR_NONE !=  mediacodec_prepare(g_media_codec_1)) {
+		g_print("mediacodec_prepare is failed\n");
+		return;
+	}
+}
+
+static void mediacodec_process_video_pkt(media_packet_h in_buf)
+{
+	if (g_media_codec_1 != NULL) {
+		/* process the media packet */
+		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input (g_media_codec_1, in_buf, 0)) {
+			g_print("mediacodec process input is failed inside mediacodec_process_video_pkt\n");
+			return;
+		}
+	} else {
+		g_print("mediacodec handle is invalid inside mediacodec_process_video_pkt()\n");
+	}
+}
+
+#if 0
+static void _local_media_packet_get_codec_data(media_packet_h pkt)
+{
+	unsigned char* get_codec_data;
+	unsigned int get_codec_data_size;
+
+	if (media_packet_get_codec_data(pkt,(void**) &get_codec_data, &get_codec_data_size) == MEDIA_PACKET_ERROR_NONE) {
+		g_print("media_packet_get_codec_data is sucess ... !\n");
+		g_print("codec_data_size = %u\n", get_codec_data_size);
+		get_codec_data[get_codec_data_size] = '\0';
+		if (get_codec_data_size == 0)
+			return;
+		g_print("media packet codec_data is [%s] \n", get_codec_data);
+	} else {
+		g_print("media_packet_get_codec_data is failed...\n");
+	}
+}
+#endif
 
 void *_fetch_video_data(void *ptr)
 {
@@ -359,6 +573,18 @@ void *_fetch_video_data(void *ptr)
 
 	*status = -1;
 	g_print("Video Data function\n");
+
+	if (validate_with_codec) {
+		int flag = 0;
+		if (v_mime == MEDIA_FORMAT_H264_SP || v_mime == MEDIA_FORMAT_H264_MP ||
+			v_mime == MEDIA_FORMAT_H264_HP) {
+			flag = 10;
+			mediacodec_init_video(MEDIACODEC_H264, flag, w, h);
+		} else {
+			g_print("Not Supported YET- Need to add mime for validating with video codec\n");
+			return (void *)status;
+		}
+	}
 	while (1) {
 		ret = mediademuxer_read_sample(demuxer, vid_track, &vidbuf);
 		if (ret == MD_EOS) {
@@ -372,16 +598,26 @@ void *_fetch_video_data(void *ptr)
 		media_packet_get_buffer_size(vidbuf, &buf_size);
 		media_packet_get_buffer_data_ptr(vidbuf, &data);
 		g_print("Video Read Count::[%4d] frame - get_buffer_size = %"PRIu64"\n", count, buf_size);
-
+#if 0
+		/* This is used for debugging purpose */
+		_local_media_packet_get_codec_data(vidbuf);
+#endif
 #if DEMUXER_OUTPUT_DUMP
 		if (data != NULL)
 			fwrite(data, 1, buf_size, fp_video_out);
 		else
 			g_print("DUMP : write(video data) fail for NULL\n");
 #endif
-		media_packet_destroy(vidbuf);
+
+		if (validate_with_codec)
+			mediacodec_process_video_pkt(vidbuf);
+		else
+			media_packet_destroy(vidbuf);
 	}
 	*status = 0;
+	if (validate_with_codec)
+		mediacodec_finish(g_media_codec_1, fp_out_codec_video);
+
 	return (void *)status;
 }
 
@@ -558,6 +794,10 @@ static void display_sub_basic()
 	g_print("d. Destroy \t");
 	g_print("q. Quit \n");
 	g_print("---------------------------------------------------------------------------\n");
+	if (validate_with_codec)
+		g_print("[Validation with Media codec]\n");
+	else
+		g_print("[validation as stand alone. To validate with media codec, run mediademuxertest with -c option]\n");
 }
 
 void _interpret_main_menu(char *cmd)
@@ -747,6 +987,11 @@ int main(int argc, char *argv[])
 	g_io_channel_set_flags(stdin_channel, G_IO_FLAG_NONBLOCK, NULL);
 	g_io_add_watch(stdin_channel, G_IO_IN, (GIOFunc) input, NULL);
 
+	if (argc > 1) {
+		/* Check whether validation with media codec is required */
+		if (argv[1][0] == '-' && argv[1][1] == 'c')
+			validate_with_codec = true;
+	}
 	displaymenu();
 
 	g_print("RUN main loop\n");

@@ -25,6 +25,7 @@
 #include <mediademuxer_private.h>
 #include <mediademuxer_port.h>
 #include <mediademuxer_port_gst.h>
+#include <media_packet_internal.h>
 
 static int gst_demuxer_init(MMHandleType *pHandle);
 static int gst_demuxer_prepare(MMHandleType pHandle, char *uri);
@@ -213,7 +214,11 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 {
 	MEDIADEMUXER_FENTER();
 	GstPad *apppad = NULL;
+	GstCaps *outcaps = NULL;
+	GstPad *parse_sink_pad = NULL;
+	GstElement *parse_element = NULL;
 	track *temp = NULL;
+
 	temp = (track *)(g_malloc(sizeof(track)));
 	if (!temp) {
 		MD_E("Not able to allocate memory");
@@ -241,7 +246,34 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 		__gst_free_stuct(head);
 		return MD_ERROR;
 	}
-	MEDIADEMUXER_LINK_PAD(pad, apppad, ERROR);
+	/* Check for type video and it should be h264 */
+	if (strstr(name, "video") && strstr(temp->caps_string, "h264")) {
+		parse_element = gst_element_factory_make("h264parse", NULL);
+		if (!parse_element) {
+			MD_E("factory not able to make h264parse");
+			__gst_free_stuct(head);
+			gst_object_unref(apppad);
+			return MD_ERROR;
+		}
+		gst_bin_add_many(GST_BIN(pipeline),parse_element, NULL);
+		MEDIADEMUXER_SET_STATE(parse_element, GST_STATE_PAUSED, ERROR);
+
+		parse_sink_pad = gst_element_get_static_pad(parse_element, "sink");
+		if (!parse_sink_pad) {
+			MD_E("sink pad of h264parse not available");
+			__gst_free_stuct(head);
+			gst_object_unref(apppad);
+			return MD_ERROR;
+		}
+
+		/* Link demuxer pad with sink pad of parse element*/
+		MEDIADEMUXER_LINK_PAD(pad, parse_sink_pad, ERROR);
+
+		outcaps = gst_caps_new_simple("video/x-h264", "stream-format",G_TYPE_STRING, "byte-stream", NULL);
+		gst_element_link_filtered(parse_element, temp->appsink, outcaps);
+	} else {
+		MEDIADEMUXER_LINK_PAD(pad, apppad, ERROR);
+	}
 	/*gst_pad_link(pad, fpad) */
 	if (*head == NULL) {
 		*head = temp;
@@ -746,6 +778,7 @@ int _set_mime_audio(media_format_h format, track *head)
 	int ret = MD_ERROR_NONE;
 	GstStructure *struc = NULL;
 	int rate = 0;
+	int bit = 0;
 	int channels = 0;
 	int id3_flag = 0;
 	const gchar *stream_format;
@@ -766,6 +799,7 @@ int _set_mime_audio(media_format_h format, track *head)
 		if (mpegversion == 4 || mpegversion == 2 ) {
 			gst_structure_get_int(struc, "channels", &channels);
 			gst_structure_get_int(struc, "rate", &rate);
+			gst_structure_get_int(struc, "bit", &bit);
 			stream_format = gst_structure_get_string(struc, "stream-format");
 			if (media_format_set_audio_mime(format, MEDIA_FORMAT_AAC_LC))
 				goto ERROR;
@@ -777,8 +811,12 @@ int _set_mime_audio(media_format_h format, track *head)
 				rate = 44100; /* default */
 			if (media_format_set_audio_samplerate(format, rate))
 				goto ERROR;
-			if (media_format_set_audio_bit(format, 0))
+			if(bit == 0) {
+				bit = 16; /* default */
+			}
+			if (media_format_set_audio_bit(format, bit)) {
 				goto ERROR;
+			}
 			if (strncmp(stream_format, "adts", 4) == 0)
 				media_format_set_audio_aac_type(format, 1);
 			else
@@ -789,6 +827,7 @@ int _set_mime_audio(media_format_h format, track *head)
 			if((layer == 3) || (id3_flag == 1)) {
 				gst_structure_get_int(struc, "channels", &channels);
 				gst_structure_get_int(struc, "rate", &rate);
+				gst_structure_get_int(struc, "bit", &bit);
 				if (media_format_set_audio_mime(format, MEDIA_FORMAT_MP3))
 					goto ERROR;
 				if(channels == 0)
@@ -799,7 +838,7 @@ int _set_mime_audio(media_format_h format, track *head)
 					rate = 44100; /* default */
 				if (media_format_set_audio_samplerate(format, rate))
 					goto ERROR;
-				if (media_format_set_audio_bit(format, 0))
+				if (media_format_set_audio_bit(format, bit))
 					goto ERROR;
 			}
 			else {
@@ -893,7 +932,7 @@ ERROR:
 }
 
 static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
-                                         GstBuffer *buffer)
+                                         GstBuffer *buffer, char *codec_data)
 {
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
@@ -948,6 +987,13 @@ static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
 		ret = MD_ERROR_UNKNOWN;
 		goto ERROR;
 	}
+	if (codec_data) {
+		if (media_packet_set_codec_data(out_pkt, (void*) codec_data, strlen(codec_data))) {
+			MD_E("unable to set the codec data\n");
+			ret = MD_ERROR_UNKNOWN;
+			goto ERROR;
+		}
+	}
 ERROR:
 	gst_buffer_unmap(buffer, &map);
 	MEDIADEMUXER_FLEAVE();
@@ -965,6 +1011,10 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	media_packet_h mediabuf = NULL;
 	media_format_h mediafmt = NULL;
 	int indx = 0;
+	char *codec_data = NULL;
+	char *temp_codec_data = NULL;
+	int index = 0;
+
 	track *atrack = demuxer->info.head;
 	if ((demuxer->selected_tracks)[track_indx] == false) {
 		MD_E("Track Not selected\n");
@@ -1062,10 +1112,29 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		goto ERROR;
 	}
 
+	/* Create the codec data and pass to _gst_copy_buf_to_media_packet() to add into the media packet */
+	temp_codec_data = strstr(atrack->caps_string, "codec_data");
+	if (temp_codec_data != NULL) {
+		while (*temp_codec_data != ')') {
+			temp_codec_data++;
+		}
+		temp_codec_data++; /* to esacpe ')' */
+		codec_data = (char*) malloc(sizeof(char)*strlen(temp_codec_data));
+		if (codec_data != NULL) {
+			while (*temp_codec_data != ',') {
+				codec_data[index++] = *temp_codec_data;
+				temp_codec_data++;
+			}
+			codec_data[index] = '\0';
+		}
+	}
+
 	/* Fill the media_packet with proper information */
-	ret = _gst_copy_buf_to_media_packet(mediabuf, buffer);
+	ret = _gst_copy_buf_to_media_packet(mediabuf, buffer, codec_data);
 	gst_sample_unref(sample);
 	*outbuf = mediabuf;
+	if (codec_data)
+		free(codec_data);
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
