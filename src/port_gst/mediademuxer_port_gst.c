@@ -465,7 +465,7 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 	type = gst_caps_to_string(caps);
 	if (type) {
 		MD_I("Media type %s found, probability %d%%\n", type, probability);
-		if (strstr(type, "quicktime")) {
+		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a"))) {
 			gst_handle->is_valid_container = true;
 			gst_handle->demux = gst_element_factory_make("qtdemux", NULL);
 			if (!gst_handle->demux) {
@@ -836,6 +836,8 @@ int _set_mime_audio(media_format_h format, track *head)
 					goto ERROR;
 				if(rate == 0)
 					rate = 44100; /* default */
+				if(bit == 0)
+					bit = 16; /* default */
 				if (media_format_set_audio_samplerate(format, rate))
 					goto ERROR;
 				if (media_format_set_audio_bit(format, bit))
@@ -863,11 +865,13 @@ int _set_mime_audio(media_format_h format, track *head)
 			goto ERROR;
 		if(channels == 0)
 			channels = 1; /* default */
+		if(bit == 0)
+			bit = 16; /* default */
 		if (media_format_set_audio_channel(format, channels))
 			goto ERROR;
 		if (media_format_set_audio_samplerate(format, rate))
 			goto ERROR;
-		if (media_format_set_audio_bit(format, 0))
+		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
 	}
 	else {
@@ -1094,7 +1098,7 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	GstElement *sink = atrack->appsink;
 	GstSample *sample = NULL;
 	if (gst_app_sink_is_eos((GstAppSink *) sink)) {
-		MD_W("End of stream reached\n");
+		MD_W("End of stream (EOS) reached\n");
 		ret = MD_EOS;
 		goto ERROR;
 	}

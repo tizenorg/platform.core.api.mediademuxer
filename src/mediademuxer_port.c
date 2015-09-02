@@ -401,12 +401,12 @@ int md_read_sample(MMHandleType demuxer, int track_indx, media_packet_h *outbuf)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->read_sample(md_handle->mdport_handle, outbuf, track_indx);
 	if (result == MD_EOS || result == MD_ERROR_NONE) {
+		MEDIADEMUXER_FLEAVE();
 		return result;
 	} else {
 		MD_E("error while reading sample\n");
 		goto ERROR;
 	}
-	MEDIADEMUXER_FLEAVE();
 ERROR:
 	result = MD_ERROR_INVALID_ARGUMENT;
 	MEDIADEMUXER_FLEAVE();

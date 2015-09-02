@@ -112,6 +112,7 @@ bool is_adts = 0;
 #if DEMUXER_OUTPUT_DUMP
 FILE *fp_audio_out = NULL;
 FILE *fp_video_out = NULL;
+bool validate_dump = false;
 
 #define ADTS_HEADER_SIZE            7
 unsigned char buf_adts[ADTS_HEADER_SIZE];
@@ -193,8 +194,13 @@ int test_mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 	g_print("test_mediademuxer_set_data_source\n");
 
 #if DEMUXER_OUTPUT_DUMP
-	fp_audio_out = fopen("/opt/usr/media/dump_audio.out", "wb");
-	fp_video_out = fopen("/opt/usr/media/dump_video.out", "wb");
+	fp_audio_out = fopen("/opt/usr/dump_audio.out", "wb");
+	if (fp_audio_out != NULL) {
+		validate_dump = true;
+		fp_video_out = fopen("/opt/usr/dump_video.out", "wb");
+	} else {
+		g_print("Error - Cannot open file for file dump, Please chek root\n");
+	}
 #endif
 
 	ret = mediademuxer_set_data_source(demuxer, path);
@@ -350,14 +356,16 @@ static void _mediacodec_fill_audio_buffer_cb(media_packet_h pkt, void *user_data
 
 static void mediacodec_init_audio(int codecid, int flag, int samplerate, int channel, int bit)
 {
-	/* This file  will be used to dump the audio data coming out from mediacodec */
-	fp_out_codec_audio = fopen("/opt/usr/media/codec_dump_audio.out", "wb");
+	/* This file will be used to dump the audio data coming out from mediacodec */
+	fp_out_codec_audio = fopen("/opt/usr/codec_dump_audio.out", "wb");
+	g_print("Create dumped file as codec_dump_audio.out\n");
+
 	if (g_media_codec != NULL) {
 		mediacodec_unprepare(g_media_codec);
 		mediacodec_destroy(g_media_codec);
 		g_media_codec = NULL;
 	}
-	if (mediacodec_create(&g_media_codec) != MEDIACODEC_ERROR_NONE)	{
+	if (mediacodec_create(&g_media_codec) != MEDIACODEC_ERROR_NONE) {
 		g_print("mediacodec_create is failed\n");
 		return;
 	}
@@ -411,12 +419,26 @@ void *_fetch_audio_data(void *ptr)
 		if (a_mime == MEDIA_FORMAT_AAC_LC || a_mime == MEDIA_FORMAT_AAC_HE ||
 			a_mime == MEDIA_FORMAT_AAC_HE_PS) {
 			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_AAC\n");
 			mediacodec_init_audio(MEDIACODEC_AAC, flag, samplerate, channel, bit);
+		} else if (a_mime == MEDIA_FORMAT_MP3) {
+			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_MP3\n");
+			mediacodec_init_audio(MEDIACODEC_MP3, flag, samplerate, channel, bit);
+		} else if (a_mime == MEDIA_FORMAT_AMR_NB) {
+			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_AMR_NB\n");
+			mediacodec_init_audio(MEDIACODEC_AMR_NB, flag, samplerate, channel, bit);
+		} else if (a_mime == MEDIA_FORMAT_AMR_WB) {
+			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_AMR_WB\n");
+			mediacodec_init_audio(MEDIACODEC_AMR_WB, flag, samplerate, channel, bit);
 		} else {
 			g_print("Not Supported YET- Need to add mime for validating with audio codec\n");
 			return (void *)status;
 		}
 	}
+
 	while (1) {
 		ret = mediademuxer_read_sample(demuxer, aud_track, &audbuf);
 		if (ret == MD_EOS) {
@@ -432,26 +454,28 @@ void *_fetch_audio_data(void *ptr)
 		g_print("Audio Read Count::[%4d] frame - get_buffer_size = %"PRIu64"\n", count, buf_size);
 
 #if DEMUXER_OUTPUT_DUMP
-		if ((a_mime == MEDIA_FORMAT_AAC_LC) && (is_adts == 0)) {
-			/* This is used only AAC raw case for adding each ADTS frame header */
-			generate_header_aac_adts(buf_adts, (buf_size+ADTS_HEADER_SIZE));
-			fwrite(&buf_adts[0], 1, ADTS_HEADER_SIZE, fp_audio_out);
-		} else if ((a_mime == MEDIA_FORMAT_AMR_NB) && (write_amrnb_header == 1)) {
-			/* This is used only AMR-NB case for adding magic header in only first frame */
-			g_print("%s - AMRNB_HDR write in first frame\n",__func__);
-			fwrite(&AMRNB_HDR[0], 1, sizeof(AMRNB_HDR)  - 1, fp_audio_out);
-			write_amrnb_header = 0;
-		} else if ((a_mime == MEDIA_FORMAT_AMR_WB) && (write_amrwb_header == 1)) {
-			/* This is used only AMR-WB case for adding magic header in only first frame */
-			g_print("%s - AMRWB_HDR write in first frame\n",__func__);
-			fwrite(&AMRWB_HDR[0], 1, sizeof(AMRWB_HDR)  - 1, fp_audio_out);
-			write_amrwb_header = 0;
-		}
+		if (validate_dump) {
+			if ((a_mime == MEDIA_FORMAT_AAC_LC) && (is_adts == 0)) {
+				/* This is used only AAC raw case for adding each ADTS frame header */
+				generate_header_aac_adts(buf_adts, (buf_size+ADTS_HEADER_SIZE));
+				fwrite(&buf_adts[0], 1, ADTS_HEADER_SIZE, fp_audio_out);
+			} else if ((a_mime == MEDIA_FORMAT_AMR_NB) && (write_amrnb_header == 1)) {
+				/* This is used only AMR-NB case for adding magic header in only first frame */
+				g_print("%s - AMRNB_HDR write in first frame\n",__func__);
+				fwrite(&AMRNB_HDR[0], 1, sizeof(AMRNB_HDR)  - 1, fp_audio_out);
+				write_amrnb_header = 0;
+			} else if ((a_mime == MEDIA_FORMAT_AMR_WB) && (write_amrwb_header == 1)) {
+				/* This is used only AMR-WB case for adding magic header in only first frame */
+				g_print("%s - AMRWB_HDR write in first frame\n",__func__);
+				fwrite(&AMRWB_HDR[0], 1, sizeof(AMRWB_HDR)  - 1, fp_audio_out);
+				write_amrwb_header = 0;
+			}
 
-		if (data != NULL)
-			fwrite(data, 1, buf_size, fp_audio_out);
-		else
-			g_print("DUMP : write(audio data) fail for NULL\n");
+			if (data != NULL)
+				fwrite(data, 1, buf_size, fp_audio_out);
+			else
+				g_print("DUMP : write(audio data) fail for NULL\n");
+		}
 #endif
 
 		if (validate_with_codec)
@@ -498,7 +522,9 @@ static void _mediacodec_fill_video_buffer_cb(media_packet_h pkt, void *user_data
 static void mediacodec_init_video(int codecid, int flag, int width, int height)
 {
 	/* This file  will be used to dump the data */
-	fp_out_codec_video = fopen("/opt/usr/media/codec_dump_video.out", "wb");
+	fp_out_codec_video = fopen("/opt/usr/codec_dump_video.out", "wb");
+	g_print("Create dumped file as codec_dump_video.out\n");
+
 	if (g_media_codec_1 != NULL) {
 		mediacodec_unprepare(g_media_codec_1);
 		mediacodec_destroy(g_media_codec_1);
@@ -579,6 +605,7 @@ void *_fetch_video_data(void *ptr)
 		if (v_mime == MEDIA_FORMAT_H264_SP || v_mime == MEDIA_FORMAT_H264_MP ||
 			v_mime == MEDIA_FORMAT_H264_HP) {
 			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_H264\n");
 			mediacodec_init_video(MEDIACODEC_H264, flag, w, h);
 		} else {
 			g_print("Not Supported YET- Need to add mime for validating with video codec\n");
@@ -603,10 +630,12 @@ void *_fetch_video_data(void *ptr)
 		_local_media_packet_get_codec_data(vidbuf);
 #endif
 #if DEMUXER_OUTPUT_DUMP
-		if (data != NULL)
-			fwrite(data, 1, buf_size, fp_video_out);
-		else
-			g_print("DUMP : write(video data) fail for NULL\n");
+		if (validate_dump) {
+			if (data != NULL)
+				fwrite(data, 1, buf_size, fp_video_out);
+			else
+				g_print("DUMP : write(video data) fail for NULL\n");
+		}
 #endif
 
 		if (validate_with_codec)
