@@ -605,8 +605,12 @@ void *_fetch_video_data(void *ptr)
 		if (v_mime == MEDIA_FORMAT_H264_SP || v_mime == MEDIA_FORMAT_H264_MP ||
 			v_mime == MEDIA_FORMAT_H264_HP) {
 			flag = 10;
-			g_print("mediacodec_init_audio() for MEDIACODEC_H264\n");
+			g_print("mediacodec_init_video() for MEDIACODEC_H264\n");
 			mediacodec_init_video(MEDIACODEC_H264, flag, w, h);
+		} else if (v_mime == MEDIA_FORMAT_H263) {
+			g_print("mediacodec_init_video() for MEDIACODEC_H263\n");
+			flag = 10;
+			mediacodec_init_video(MEDIACODEC_H263, flag, w, h);
 		} else {
 			g_print("Not Supported YET- Need to add mime for validating with video codec\n");
 			return (void *)status;

@@ -465,7 +465,7 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 	type = gst_caps_to_string(caps);
 	if (type) {
 		MD_I("Media type %s found, probability %d%%\n", type, probability);
-		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a"))) {
+		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a")) || strstr(type, "x-3gp")) {
 			gst_handle->is_valid_container = true;
 			gst_handle->demux = gst_element_factory_make("qtdemux", NULL);
 			if (!gst_handle->demux) {
@@ -761,6 +761,15 @@ int _set_mime_video(media_format_h format, track *head)
 			if (media_format_set_video_height(format, src_height))
 				goto ERROR;
 		}
+	} else if (gst_structure_has_name(struc, "video/x-h263")) {
+		gst_structure_get_int(struc, "width", &src_width);
+		gst_structure_get_int(struc, "height", &src_height);
+		if (media_format_set_video_mime(format, MEDIA_FORMAT_H263))
+			goto ERROR;
+		if (media_format_set_video_width(format, src_width))
+			goto ERROR;
+		if (media_format_set_video_height(format, src_height))
+			goto ERROR;
 	} else {
 		MD_I("Video mime not supported so far\n");
 		goto ERROR;
@@ -873,8 +882,39 @@ int _set_mime_audio(media_format_h format, track *head)
 			goto ERROR;
 		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
-	}
-	else {
+	} else if (gst_structure_has_name(struc, "audio/AMR")) {
+		gst_structure_get_int(struc, "channels", &channels);
+		gst_structure_get_int(struc, "rate", &rate);
+		gst_structure_get_int(struc, "bit", &bit);
+		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_NB))
+			goto ERROR;
+		if(channels == 0)
+			channels = 1; /* default */
+		if (media_format_set_audio_channel(format, channels))
+			goto ERROR;
+		if (media_format_set_audio_samplerate(format, rate))
+			goto ERROR;
+		if (bit == 0)
+			bit = 16; /* default */
+		if (media_format_set_audio_bit(format, bit))
+			goto ERROR;
+	} else if (gst_structure_has_name(struc, "audio/AMR-WB")) {
+		gst_structure_get_int(struc, "channels", &channels);
+		gst_structure_get_int(struc, "rate", &rate);
+		gst_structure_get_int(struc, "bit", &bit);
+		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_WB))
+			goto ERROR;
+		if(channels == 0)
+			channels = 1; /* default */
+		if (media_format_set_audio_channel(format, channels))
+			goto ERROR;
+		if (media_format_set_audio_samplerate(format, rate))
+			goto ERROR;
+		if (bit == 0)
+			bit = 16; /* default */
+		if (media_format_set_audio_bit(format, bit))
+			goto ERROR;
+	} else {
 		MD_I("Audio mime not supported so far\n");
 		goto ERROR;
 	}
