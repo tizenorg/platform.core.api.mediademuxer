@@ -53,8 +53,8 @@ media_format_mimetype_e v_mime;
 media_format_mimetype_e a_mime;
 int g_menu_state = CURRENT_STATUS_MAINMENU;
 int num_tracks = 0;
-int aud_track =-1;
-int vid_track =-1;
+int aud_track = -1;
+int vid_track = -1;
 int w;
 int h;
 int channel = 0;
@@ -80,28 +80,28 @@ bool is_adts = 0;
 		if (ret != MD_ERROR_NONE) {\
 			printf("[%s:%d] error code : %x \n", __func__, __LINE__, ret); \
 			return; \
-		}\
-	} while(0)
+		} \
+	} while (0)
 
-#define debug_msg_t(fmt,arg...)\
+#define debug_msg_t(fmt, arg...)\
 	do { \
-		fprintf(stderr, MMF_DEBUG"[%s:%05d]  " fmt "\n",__func__, __LINE__, ##arg); \
-	} while(0)
+		fprintf(stderr, MMF_DEBUG"[%s:%05d]  " fmt "\n", __func__, __LINE__, ##arg); \
+	} while (0)
 
-#define err_msg_t(fmt,arg...)\
+#define err_msg_t(fmt, arg...)\
 	do { \
-		fprintf(stderr, MMF_ERR"[%s:%05d]  " fmt "\n",__func__, __LINE__, ##arg); \
-	} while(0)
+		fprintf(stderr, MMF_ERR"[%s:%05d]  " fmt "\n", __func__, __LINE__, ##arg); \
+	} while (0)
 
-#define info_msg_t(fmt,arg...)\
+#define info_msg_t(fmt, arg...)\
 	do { \
-		fprintf(stderr, MMF_INFO"[%s:%05d]  " fmt "\n",__func__, __LINE__, ##arg); \
-	} while(0)
+		fprintf(stderr, MMF_INFO"[%s:%05d]  " fmt "\n", __func__, __LINE__, ##arg); \
+	} while (0)
 
-#define warn_msg_t(fmt,arg...)\
+#define warn_msg_t(fmt, arg...)\
 	do { \
-		fprintf(stderr, MMF_WARN"[%s:%05d]  " fmt "\n",__func__, __LINE__, ##arg); \
-	} while(0)
+		fprintf(stderr, MMF_WARN"[%s:%05d]  " fmt "\n", __func__, __LINE__, ##arg); \
+	} while (0)
 
 
 /*-----------------------------------------------------------------------
@@ -119,10 +119,10 @@ unsigned char buf_adts[ADTS_HEADER_SIZE];
 
 #define AMR_NB_MIME_HDR_SIZE          6
 #define AMR_WB_MIME_HDR_SIZE          9
-static const char AMRNB_HDR [] = "#!AMR\n";
-static const char AMRWB_HDR [] = "#!AMR-WB\n";
-int write_amrnb_header = 0;             /* write  magic number for AMR-NB Header at one time */
-int write_amrwb_header = 0;             /* write  magic number for AMR-WB Header at one time */
+static const char AMRNB_HDR[] = "#!AMR\n";
+static const char AMRWB_HDR[] = "#!AMR-WB\n";
+int write_amrnb_header = 0;	/* write  magic number for AMR-NB Header at one time */
+int write_amrwb_header = 0;	/* write  magic number for AMR-WB Header at one time */
 #endif
 
 bool validate_with_codec = false;
@@ -143,9 +143,9 @@ FILE *fp_out_codec_video = NULL;
  **/
 void generate_header_aac_adts(unsigned char *buffer, int packetLen)
 {
-	int profile = 2;    //AAC LC (0x01)
-	int freqIdx = 4;    //44KHz (0x04)
-	int chanCfg = 1;    //CPE (0x01)
+	int profile = 2;	/* AAC LC (0x01) */
+	int freqIdx = 4;	/* 44KHz (0x04) */
+	int chanCfg = 1;	/* CPE (0x01) */
 
 	if (samplerate == 96000) freqIdx = 0;
 	else if (samplerate == 88200) freqIdx = 1;
@@ -198,9 +198,8 @@ int test_mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 	if (fp_audio_out != NULL) {
 		validate_dump = true;
 		fp_video_out = fopen("/opt/usr/dump_video.out", "wb");
-	} else {
+	} else
 		g_print("Error - Cannot open file for file dump, Please chek root\n");
-	}
 #endif
 
 	ret = mediademuxer_set_data_source(demuxer, path);
@@ -225,7 +224,7 @@ int test_mediademuxer_get_track_count()
 
 int test_mediademuxer_select_track()
 {
-        int track = 0;
+	int track = 0;
 	g_print("test_mediademuxer_select_track\n");
 	for (track = 0; track < num_tracks; track++) {
 		if (mediademuxer_select_track(demuxer, track)) {
@@ -258,20 +257,19 @@ int test_mediademuxer_get_track_info()
 		for (; track < num_tracks; track++) {
 			if (ret == 0) {
 				g_print("g_media_format[%d] is created successfully! \n", track);
-				ret = mediademuxer_get_track_info(demuxer, track,
-				                                                                &g_media_format[track]);
+				ret = mediademuxer_get_track_info(demuxer, track, &g_media_format[track]);
 				if (ret == 0) {
 					if (media_format_get_video_info(g_media_format[track], &v_mime,
-					        &w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+								&w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
 						g_print("media_format_get_video_info is sucess!\n");
 						g_print("\t\t[media_format_get_video]mime:%x, width :%d, height :%d\n",
-						                v_mime, w, h);
+								v_mime, w, h);
 						vid_track = track;
 					} else if (media_format_get_audio_info(g_media_format[track], &a_mime,
-					            &channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+								&channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
 						g_print("media_format_get_audio_info is sucess!\n");
 						g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
-						                a_mime, channel, samplerate, bit);
+								a_mime, channel, samplerate, bit);
 						media_format_get_audio_aac_type(g_media_format[track], &is_adts);
 						aud_track = track;
 					} else {
@@ -319,9 +317,8 @@ static void mediacodec_finish(mediacodec_h handle, FILE *fp)
 		return;
 	}
 	err = mediacodec_destroy(handle);
-	if (err != MEDIACODEC_ERROR_NONE) {
+	if (err != MEDIACODEC_ERROR_NONE)
 		g_print("mediacodec_destory failed error = %d \n", err);
-	}
 	return;
 }
 
@@ -337,11 +334,10 @@ static void _mediacodec_fill_audio_buffer_cb(media_packet_h pkt, void *user_data
 		if (err == MEDIACODEC_ERROR_NONE) {
 			media_packet_get_buffer_size(output_buf, &buf_size);
 			media_packet_get_buffer_data_ptr(output_buf, &data);
-			if (data != NULL) {
+			if (data != NULL)
 				fwrite(data, 1, buf_size, fp_out_codec_audio);
-			} else {
+			else
 				g_print("Data is null inside _mediacodec_fill_audio_buffer_cb\n");
-			}
 
 			media_packet_destroy(output_buf);
 		} else {
@@ -376,7 +372,7 @@ static void mediacodec_init_audio(int codecid, int flag, int samplerate, int cha
 		return;
 	}
 	/* set the audio dec info */
-	if ((mediacodec_set_adec_info(g_media_codec, samplerate, channel, bit))!= MEDIACODEC_ERROR_NONE) {
+	if ((mediacodec_set_adec_info(g_media_codec, samplerate, channel, bit)) != MEDIACODEC_ERROR_NONE) {
 		g_print("mediacodec_set_adec is failed\n");
 		return;
 	}
@@ -395,7 +391,7 @@ static void mediacodec_process_audio_pkt(media_packet_h in_buf)
 {
 	if (g_media_codec != NULL) {
 		/* process the media packet */
-		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input (g_media_codec, in_buf, 0)) {
+		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input(g_media_codec, in_buf, 0)) {
 			g_print("mediacodec_process_input is failed inside mediacodec_process_audio_pkt\n");
 			return;
 		}
@@ -461,12 +457,12 @@ void *_fetch_audio_data(void *ptr)
 				fwrite(&buf_adts[0], 1, ADTS_HEADER_SIZE, fp_audio_out);
 			} else if ((a_mime == MEDIA_FORMAT_AMR_NB) && (write_amrnb_header == 1)) {
 				/* This is used only AMR-NB case for adding magic header in only first frame */
-				g_print("%s - AMRNB_HDR write in first frame\n",__func__);
+				g_print("%s - AMRNB_HDR write in first frame\n", __func__);
 				fwrite(&AMRNB_HDR[0], 1, sizeof(AMRNB_HDR)  - 1, fp_audio_out);
 				write_amrnb_header = 0;
 			} else if ((a_mime == MEDIA_FORMAT_AMR_WB) && (write_amrwb_header == 1)) {
 				/* This is used only AMR-WB case for adding magic header in only first frame */
-				g_print("%s - AMRWB_HDR write in first frame\n",__func__);
+				g_print("%s - AMRWB_HDR write in first frame\n", __func__);
 				fwrite(&AMRWB_HDR[0], 1, sizeof(AMRWB_HDR)  - 1, fp_audio_out);
 				write_amrwb_header = 0;
 			}
@@ -501,13 +497,12 @@ static void _mediacodec_fill_video_buffer_cb(media_packet_h pkt, void *user_data
 		err = mediacodec_get_output(g_media_codec_1, &output_buf, 0);
 		if (err == MEDIACODEC_ERROR_NONE) {
 			media_packet_get_buffer_size(output_buf, &buf_size);
-			//g_print("%s - output_buf size = %lld\n",__func__, buf_size);
+			/* g_print("%s - output_buf size = %lld\n", __func__, buf_size); */
 			media_packet_get_buffer_data_ptr(output_buf, &data);
-			if (data != NULL) {
+			if (data != NULL)
 				fwrite(data, 1, buf_size, fp_out_codec_video);
-			} else {
+			else
 				g_print("Data is null inside _mediacodec_fill_video_buffer_cb\n");
-			}
 			media_packet_destroy(output_buf);
 		} else {
 			g_print("mediacodec_get_output failed inside _mediacodec_fill_video_buffer_cb lerr = %d\n", err);
@@ -560,7 +555,7 @@ static void mediacodec_process_video_pkt(media_packet_h in_buf)
 {
 	if (g_media_codec_1 != NULL) {
 		/* process the media packet */
-		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input (g_media_codec_1, in_buf, 0)) {
+		if (MEDIACODEC_ERROR_NONE != mediacodec_process_input(g_media_codec_1, in_buf, 0)) {
 			g_print("mediacodec process input is failed inside mediacodec_process_video_pkt\n");
 			return;
 		}
@@ -575,7 +570,7 @@ static void _local_media_packet_get_codec_data(media_packet_h pkt)
 	unsigned char* get_codec_data;
 	unsigned int get_codec_data_size;
 
-	if (media_packet_get_codec_data(pkt,(void**) &get_codec_data, &get_codec_data_size) == MEDIA_PACKET_ERROR_NONE) {
+	if (media_packet_get_codec_data(pkt, (void**) &get_codec_data, &get_codec_data_size) == MEDIA_PACKET_ERROR_NONE) {
 		g_print("media_packet_get_codec_data is sucess ... !\n");
 		g_print("codec_data_size = %u\n", get_codec_data_size);
 		get_codec_data[get_codec_data_size] = '\0';
@@ -661,11 +656,11 @@ int test_mediademuxer_read_sample()
 	/* Initialize and set thread detached attribute */
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	if(vid_track != -1){
+	if (vid_track != -1) {
 		g_print("In main: creating thread  for video\n");
 		pthread_create(&thread[0], &attr, _fetch_video_data, NULL);
 	}
-	if(aud_track != -1){
+	if (aud_track != -1) {
 		g_print("In main: creating thread  for audio\n");
 		pthread_create(&thread[1], &attr, _fetch_audio_data, NULL);
 	}
@@ -728,7 +723,7 @@ int test_mediademuxer_get_state()
 {
 	g_print("test_mediademuxer_get_state\n");
 	mediademuxer_state state;
-	if(mediademuxer_get_state(demuxer, &state) == MEDIADEMUXER_ERROR_NONE) {
+	if (mediademuxer_get_state(demuxer, &state) == MEDIADEMUXER_ERROR_NONE) {
 		if (state == MEDIADEMUXER_NONE)
 			g_print("Mediademuxer_state = NONE\n");
 		else if (state == MEDIADEMUXER_IDLE)
@@ -739,23 +734,21 @@ int test_mediademuxer_get_state()
 			g_print("Mediademuxer_state = DEMUXING\n");
 		else
 			g_print("Mediademuxer_state = NOT SUPPORT STATE\n");
-	}
-	else {
+	} else
 		g_print("Mediademuxer_state call failed\n");
-	}
 	return 0;
 }
 
 void app_err_cb(mediademuxer_error_e error, void *user_data)
 {
-	printf("Got Error %d from Mediademuxer\n",error);
+	printf("Got Error %d from Mediademuxer\n", error);
 }
 
 int test_mediademuxer_set_error_cb()
 {
 	int ret = 0;
 	g_print("test_mediademuxer_set_error_cb\n");
-	ret = mediademuxer_set_error_cb(demuxer,app_err_cb,demuxer);
+	ret = mediademuxer_set_error_cb(demuxer, app_err_cb, demuxer);
 	return ret;
 }
 
@@ -906,77 +899,73 @@ gboolean timeout_menu_display(void *data)
 static void interpret(char *cmd)
 {
 	switch (g_menu_state) {
-		case CURRENT_STATUS_MAINMENU: {
-				_interpret_main_menu(cmd);
-				break;
-			}
-		case CURRENT_STATUS_FILENAME: {
-				int ret = 0;
-				ret = test_mediademuxer_set_data_source(demuxer, cmd);
+	case CURRENT_STATUS_MAINMENU: {
+			_interpret_main_menu(cmd);
+			break;
+		}
+	case CURRENT_STATUS_FILENAME: {
+			int ret = 0;
+			ret = test_mediademuxer_set_data_source(demuxer, cmd);
+			if (ret != MD_ERROR_INVALID_ARGUMENT) {
+				ret = test_mediademuxer_prepare();
 				if (ret != MD_ERROR_INVALID_ARGUMENT) {
-					ret = test_mediademuxer_prepare();
-					if (ret != MD_ERROR_INVALID_ARGUMENT) {
-						g_menu_state = CURRENT_STATUS_SET_DATA;
-					} else {
-						g_print("test_mediademuxer_prepare failed \n");
-						g_menu_state = CURRENT_STATUS_FILENAME;
-					}
+					g_menu_state = CURRENT_STATUS_SET_DATA;
 				} else {
+					g_print("test_mediademuxer_prepare failed \n");
 					g_menu_state = CURRENT_STATUS_FILENAME;
 				}
-				break;
+			} else {
+				g_menu_state = CURRENT_STATUS_FILENAME;
 			}
-		case CURRENT_STATUS_SET_DATA: {
-				int len = strlen(cmd);
-
-				if (len == 1) {
-					if (strncmp(cmd, "1", len) == 0) {
-						test_mediademuxer_get_track_count();
-					} else if (strncmp(cmd, "2", len) == 0) {
-						test_mediademuxer_select_track();
-					} else if (strncmp(cmd, "3", len) == 0) {
-						test_mediademuxer_start();
-					} else if (strncmp(cmd, "4", len) == 0) {
-						test_mediademuxer_get_track_info();
-					} else if (strncmp(cmd, "5", len) == 0) {
-						test_mediademuxer_read_sample();
-					} else if (strncmp(cmd, "6", len) == 0) {
-						test_mediademuxer_stop();
-					} else if (strncmp(cmd, "7", len) == 0) {
-						test_mediademuxer_unprepare();
-					} else if (strncmp(cmd, "8", len) == 0) {
-						test_mediademuxer_get_state();
-					} else if (strncmp(cmd, "9", len) == 0) {
-						reset_menu_state();
-					} else if (strncmp(cmd, "a", len) == 0) {
-						test_mediademuxer_seek_to();
-					} else if (strncmp(cmd, "b", len) == 0) {
-						test_mediademuxer_unselect_track();
-					} else if (strncmp(cmd, "c", len) == 0) {
-						test_mediademuxer_get_sample_track_index();
-					} else if (strncmp(cmd, "d", len) == 0) {
-						test_mediademuxer_get_sample_track_time();
-					} else if (strncmp(cmd, "e", len) == 0) {
-						test_mediademuxer_advance();
-					} else if (strncmp(cmd, "f", len) == 0) {
-						test_mediademuxer_is_key_frame();
-					} else if (strncmp(cmd, "g", len) == 0) {
-						test_mediademuxer_is_encrypted();
-					} else {
-						g_print("UNKNOW COMMAND\n");
-					}
-				} else if (len == 2) {
-					if (strncmp(cmd, "10", len) == 0) {
-						g_print("UNKNOW COMMAND\n");
-					} else {
-						g_print("UNKNOW COMMAND\n");
-					}
-				} else {
+			break;
+		}
+	case CURRENT_STATUS_SET_DATA: {
+			int len = strlen(cmd);
+			if (len == 1) {
+				if (strncmp(cmd, "1", len) == 0)
+					test_mediademuxer_get_track_count();
+				else if (strncmp(cmd, "2", len) == 0)
+					test_mediademuxer_select_track();
+				else if (strncmp(cmd, "3", len) == 0)
+					test_mediademuxer_start();
+				else if (strncmp(cmd, "4", len) == 0)
+					test_mediademuxer_get_track_info();
+				else if (strncmp(cmd, "5", len) == 0)
+					test_mediademuxer_read_sample();
+				else if (strncmp(cmd, "6", len) == 0)
+					test_mediademuxer_stop();
+				else if (strncmp(cmd, "7", len) == 0)
+					test_mediademuxer_unprepare();
+				else if (strncmp(cmd, "8", len) == 0)
+					test_mediademuxer_get_state();
+				else if (strncmp(cmd, "9", len) == 0)
+					reset_menu_state();
+				else if (strncmp(cmd, "a", len) == 0)
+					test_mediademuxer_seek_to();
+				else if (strncmp(cmd, "b", len) == 0)
+					test_mediademuxer_unselect_track();
+				else if (strncmp(cmd, "c", len) == 0)
+					test_mediademuxer_get_sample_track_index();
+				else if (strncmp(cmd, "d", len) == 0)
+					test_mediademuxer_get_sample_track_time();
+				else if (strncmp(cmd, "e", len) == 0)
+					test_mediademuxer_advance();
+				else if (strncmp(cmd, "f", len) == 0)
+					test_mediademuxer_is_key_frame();
+				else if (strncmp(cmd, "g", len) == 0)
+					test_mediademuxer_is_encrypted();
+				else
 					g_print("UNKNOW COMMAND\n");
-				}
-				break;
-			}
-		default:
+			} else if (len == 2) {
+				if (strncmp(cmd, "10", len) == 0)
+					g_print("UNKNOW COMMAND\n");
+				else
+					g_print("UNKNOW COMMAND\n");
+			} else
+				g_print("UNKNOW COMMAND\n");
+			break;
+		}
+	default:
 			break;
 	}
 	g_timeout_add(100, timeout_menu_display, 0);

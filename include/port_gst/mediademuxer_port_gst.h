@@ -33,26 +33,22 @@ extern "C" {
 #define POLLING_INTERVAL 1000
 #define MAX_APP_BUFFER 100
 
-#define MEDIADEMUXER_SET_STATE( x_element, x_state, error ) \
-	do \
-	{ \
-		MD_I("setting state [%s:%d] to [%s]\n", #x_state, x_state, GST_ELEMENT_NAME( x_element ) ); \
-		if ( GST_STATE_CHANGE_FAILURE == gst_element_set_state ( x_element, x_state) ) \
-		{ \
-			MD_E("failed to set state %s to %s\n", #x_state, GST_ELEMENT_NAME( x_element )); \
+#define MEDIADEMUXER_SET_STATE(x_element, x_state, error) \
+	do { \
+		MD_I("setting state [%s:%d] to [%s]\n", #x_state, x_state, GST_ELEMENT_NAME(x_element)); \
+		if (GST_STATE_CHANGE_FAILURE == gst_element_set_state(x_element, x_state)) { \
+			MD_E("failed to set state %s to %s\n", #x_state, GST_ELEMENT_NAME(x_element)); \
 			goto error; \
 		} \
-	}while(0)
+	} while (0)
 
-#define MEDIADEMUXER_LINK_PAD( srcpad, sinkpad, error ) \
-	do \
-	{ \
-		if ( GST_PAD_LINK_OK != gst_pad_link(srcpad, sinkpad) ) \
-		{ \
+#define MEDIADEMUXER_LINK_PAD(srcpad, sinkpad, error) \
+	do { \
+		if (GST_PAD_LINK_OK != gst_pad_link(srcpad, sinkpad)) { \
 			MD_E("failed to linkpad\n"); \
 			goto error; \
 		} \
-	}while(0)
+	} while (0)
 
 typedef enum {
 	_GST_EVENT_TYPE_COMPLETE,
@@ -99,8 +95,8 @@ typedef struct _mdgst_handle_t {
 	int total_tracks;
 	GMutex *mutex;
 	/* for user cb */
-	void* user_cb[_GST_EVENT_TYPE_NUM];
-	void* user_data[_GST_EVENT_TYPE_NUM];
+	void *user_cb[_GST_EVENT_TYPE_NUM];
+	void *user_data[_GST_EVENT_TYPE_NUM];
 
 } mdgst_handle_t;
 
@@ -119,4 +115,4 @@ typedef void (*gst_error_cb)(mediademuxer_error_e error, void *user_data);
 #ifdef __cplusplus
 }
 #endif
-#endif /* __TIZEN_MEDIADEMUXER_PORT_GST_H__ */
+#endif	/* __TIZEN_MEDIADEMUXER_PORT_GST_H__ */

@@ -24,7 +24,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif	/* __cplusplus */
 
 #ifndef TIZEN_ERROR_MEDIA_DEMUXER
 #define TIZEN_ERROR_MEDIA_DEMUXER -0x04000000
@@ -54,7 +54,7 @@ typedef enum {
 	MEDIADEMUXER_NONE,		/**< The mediademuxer is not created */
 	MEDIADEMUXER_IDLE,			/**< The mediademuxer is created, but not prepared */
 	MEDIADEMUXER_READY,		/**< The mediademuxer is ready to demux media */
-	MEDIADEMUXER_DEMUXING	/**< The mediademuxer is demuxing media */
+	MEDIADEMUXER_DEMUXING		/**< The mediademuxer is demuxing media */
 } mediademuxer_state;
 
 /**
@@ -62,17 +62,17 @@ typedef enum {
  * @since_tizen 3.0
  */
 typedef enum {
-	MEDIADEMUXER_ERROR_NONE = TIZEN_ERROR_NONE,             								/*< Successful */
-	MEDIADEMUXER_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,							/**< Out of memory */
-	MEDIADEMUXER_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER,       		/**< Invalid parameter */
-	MEDIADEMUXER_ERROR_INVALID_OPERATION = TIZEN_ERROR_INVALID_OPERATION,       		/**< Invalid operation */
-	MEDIADEMUXER_ERROR_NOT_SUPPORTED  = TIZEN_ERROR_NOT_SUPPORTED,                     /**< Not supported */
-	MEDIADEMUXER_ERROR_PERMISSION_DENIED  = TIZEN_ERROR_PERMISSION_DENIED,		/**< Permission denied */
-	MEDIADEMUXER_ERROR_INVALID_STATE = TIZEN_ERROR_MEDIA_DEMUXER | 0x01,        		/**< Invalid state */
-	MEDIADEMUXER_ERROR_INVALID_PATH = TIZEN_ERROR_MEDIA_DEMUXER | 0x02,          		/**< Invalid path */
-	MEDIADEMUXER_ERROR_RESOURCE_LIMIT = TIZEN_ERROR_MEDIA_DEMUXER | 0x03,		/**< Resource limit */
-	MEDIADEMUXER_ERROR_SEEK_FAILED = TIZEN_ERROR_MEDIA_DEMUXER | 0x04,		/**< Seek operation failure */
-	MEDIADEMUXER_ERROR_DRM_NOT_PERMITTED = TIZEN_ERROR_MEDIA_DEMUXER | 0x05		/**< Not permitted format */
+	MEDIADEMUXER_ERROR_NONE = TIZEN_ERROR_NONE,	/*< Successful */
+	MEDIADEMUXER_ERROR_OUT_OF_MEMORY = TIZEN_ERROR_OUT_OF_MEMORY,	/**< Out of memory */
+	MEDIADEMUXER_ERROR_INVALID_PARAMETER = TIZEN_ERROR_INVALID_PARAMETER,	/**< Invalid parameter */
+	MEDIADEMUXER_ERROR_INVALID_OPERATION = TIZEN_ERROR_INVALID_OPERATION,	/**< Invalid operation */
+	MEDIADEMUXER_ERROR_NOT_SUPPORTED = TIZEN_ERROR_NOT_SUPPORTED,	/**< Not supported */
+	MEDIADEMUXER_ERROR_PERMISSION_DENIED = TIZEN_ERROR_PERMISSION_DENIED,	/**< Permission denied */
+	MEDIADEMUXER_ERROR_INVALID_STATE = TIZEN_ERROR_MEDIA_DEMUXER | 0x01,	/**< Invalid state */
+	MEDIADEMUXER_ERROR_INVALID_PATH = TIZEN_ERROR_MEDIA_DEMUXER | 0x02,	/**< Invalid path */
+	MEDIADEMUXER_ERROR_RESOURCE_LIMIT = TIZEN_ERROR_MEDIA_DEMUXER | 0x03,	/**< Resource limit */
+	MEDIADEMUXER_ERROR_SEEK_FAILED = TIZEN_ERROR_MEDIA_DEMUXER | 0x04,	/**< Seek operation failure */
+	MEDIADEMUXER_ERROR_DRM_NOT_PERMITTED = TIZEN_ERROR_MEDIA_DEMUXER | 0x05	/**< Not permitted format */
 } mediademuxer_error_e;
 
 /**
@@ -93,7 +93,7 @@ typedef enum {
  * @see mediademuxer_set_error_cb()
  * @see mediademuxer_unset_error_cb()
  */
-typedef void (*mediademuxer_error_cb)(mediademuxer_error_e error, void *user_data);
+typedef void (*mediademuxer_error_cb) (mediademuxer_error_e error, void *user_data);
 
 /**
  * @brief Creates a media demuxer handle for demuxing.
@@ -207,8 +207,7 @@ int mediademuxer_start(mediademuxer_h demuxer);
  * @see media_format_unref()
  * @see #media_format_h
  * */
-int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index,
-                                media_format_h *format);
+int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index, media_format_h *format);
 
 /**
  * @brief Reads a frame(sample) of one single track.
@@ -232,8 +231,7 @@ int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index,
  * @see media_packet_destroy()
  * @see #media_packet_h
  * */
-int mediademuxer_read_sample(mediademuxer_h demuxer, int track_index,
-                             media_packet_h *outbuf);
+int mediademuxer_read_sample(mediademuxer_h demuxer, int track_index, media_packet_h *outbuf);
 
 /**
  * @brief Seeks to a particular instance of time (in micro seconds).
@@ -348,8 +346,7 @@ int mediademuxer_get_state(mediademuxer_h demuxer, mediademuxer_state *state);
  * @see mediademuxer_unset_error_cb()
  * @see mediademuxer_error_cb()
  * */
-int mediademuxer_set_error_cb(mediademuxer_h demuxer,
-			mediademuxer_error_cb callback, void *user_data);
+int mediademuxer_set_error_cb(mediademuxer_h demuxer, mediademuxer_error_cb callback, void *user_data);
 
 /**
  * @brief Unregisters the error callback function.
@@ -369,4 +366,4 @@ int mediademuxer_unset_error_cb(mediademuxer_h demuxer);
 #ifdef __cplusplus
 }
 #endif
-#endif /* __TIZEN_MEDIADEMUXER_H__ */
+#endif	/* __TIZEN_MEDIADEMUXER_H__ */

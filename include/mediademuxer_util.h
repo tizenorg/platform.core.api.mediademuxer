@@ -34,13 +34,13 @@
 extern "C" {
 #endif
 
-//#define PRINT_ON_CONSOLE
+/* #define PRINT_ON_CONSOLE */
 #ifdef PRINT_ON_CONSOLE
 #include <stdlib.h>
 #include <stdio.h>
 #define PRINT_F          g_print
-#define MD_FENTER();     PRINT_F("function:[%s] ENTER\n",__func__);
-#define MD_FLEAVE();     PRINT_F("function [%s] LEAVE\n",__func__);
+#define MD_FENTER();     PRINT_F("function:[%s] ENTER\n", __func__);
+#define MD_FLEAVE();     PRINT_F("function [%s] LEAVE\n", __func__);
 #define MD_C             PRINT_F
 #define MD_E             PRINT_F
 #define MD_W             PRINT_F
@@ -51,21 +51,21 @@ extern "C" {
 #else
 #include <stdlib.h>
 #include <stdio.h>
-#define MD_FENTER();     LOGI("function:[%s] ENTER\n",__func__);
-#define MD_FLEAVE();     LOGI("function [%s] LEAVE\n",__func__);
-#define MD_C             LOGE	/*MMF_DEBUG_LEVEL_0 */
-#define MD_E             LOGE	/*MMF_DEBUG_LEVEL_1 */
-#define MD_W             LOGW	/*MMF_DEBUG_LEVEL_2 */
-#define MD_I             LOGI	/*MMF_DEBUG_LEVEL_3 */
-#define MD_L             LOGI	/*MMF_DEBUG_LEVEL_4 */
-#define MD_V             LOGV	/*MMF_DEBUG_LEVEL_5 */
-#define MD_F             LOGF	/*MMF_DEBUG_LEVEL_6 - indicate that something in the executed code path is not fully implemented or handled yet */
+#define MD_FENTER();     LOGI("function:[%s] ENTER\n", __func__);
+#define MD_FLEAVE();     LOGI("function [%s] LEAVE\n", __func__);
+#define MD_C             LOGE	/* MMF_DEBUG_LEVEL_0 */
+#define MD_E             LOGE	/* MMF_DEBUG_LEVEL_1 */
+#define MD_W             LOGW	/* MMF_DEBUG_LEVEL_2 */
+#define MD_I             LOGI	/* MMF_DEBUG_LEVEL_3 */
+#define MD_L             LOGI	/* MMF_DEBUG_LEVEL_4 */
+#define MD_V             LOGV	/* MMF_DEBUG_LEVEL_5 */
+#define MD_F             LOGF	/* MMF_DEBUG_LEVEL_6 - indicate that something in the executed code path is not fully implemented or handled yet */
 #endif
 
 /* general */
 #define MEDIADEMUXER_FREEIF(x) \
-	if ( x ) \
-		g_free( x ); \
+	if (x) \
+		g_free(x); \
 	x = NULL;
 
 #if 1
@@ -76,18 +76,16 @@ extern "C" {
 #define MEDIADEMUXER_FLEAVE();
 #endif
 
-#define MEDIADEMUXER_CHECK_NULL( x_var ) \
-	if ( ! x_var ) \
-	{ \
-		MD_E("[%s] is NULL\n", #x_var ); \
+#define MEDIADEMUXER_CHECK_NULL(x_var) \
+	if (!x_var) { \
+		MD_E("[%s] is NULL\n", #x_var); \
 		goto ERROR; \
 	}
 
-#define MEDIADEMUXER_CHECK_SET_AND_PRINT( x_var, x_cond, ret, ret_val, err_text ) \
-	if ( x_var != x_cond ) \
-	{ \
+#define MEDIADEMUXER_CHECK_SET_AND_PRINT(x_var, x_cond, ret, ret_val, err_text) \
+	if (x_var != x_cond) { \
 		ret = ret_val; \
-		MD_E("%s\n", #err_text ); \
+		MD_E("%s\n", #err_text); \
 		goto ERROR; \
 	}
 

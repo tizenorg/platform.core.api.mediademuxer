@@ -44,7 +44,7 @@ static int gst_demuxer_destroy(MMHandleType pHandle);
 static int gst_set_error_cb(MMHandleType pHandle,
 			gst_error_cb callback, void* user_data);
 
-/*Media Demuxer API common*/
+/* Media Demuxer API common */
 static media_port_demuxer_ops def_demux_ops = {
 	.n_size = 0,
 	.init = gst_demuxer_init,
@@ -114,23 +114,23 @@ gboolean __gst_bus_call(GstBus *bus, GstMessage *msg, gpointer data)
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
 	switch (GST_MESSAGE_TYPE(msg)) {
-		case GST_MESSAGE_EOS: {
-				MD_I("EOS Reached");
+	case GST_MESSAGE_EOS: {
+			MD_I("EOS Reached");
+		}
+		break;
+	case GST_MESSAGE_ERROR: {
+			GError *error = NULL;
+			gst_message_parse_error(msg, &error, NULL);
+			if (!error) {
+				MD_I("GST error message parsing failed");
+				break;
 			}
-			break;
-		case GST_MESSAGE_ERROR: {
-				GError *error = NULL;
-				gst_message_parse_error(msg, &error, NULL);
-				if (!error) {
-					MD_I("GST error message parsing failed");
-					break;
-				}
-				MD_E("Error: %s\n", error->message);
-				g_error_free(error);
-			}
-			break;
-		default:
-			break;
+			MD_E("Error: %s\n", error->message);
+			g_error_free(error);
+		}
+		break;
+	default:
+		break;
 	}
 	MEDIADEMUXER_FLEAVE();
 	return ret;
@@ -177,8 +177,8 @@ void __gst_free_stuct(track **head)
 	while (temp) {
 		/*
 		if (temp->pad) {
-		MD_I("deallocate GST_PAD %p\n", temp->pad);
-		gst_object_unref(temp->pad);
+			MD_I("deallocate GST_PAD %p\n", temp->pad);
+			gst_object_unref(temp->pad);
 		} */
 		if (temp->name) {
 			MD_I("deallocate GST_PAD name  %p\n", temp->name);
@@ -210,7 +210,7 @@ void __gst_free_stuct(track **head)
 }
 
 int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
-                         GstElement *pipeline)
+						GstElement *pipeline)
 {
 	MEDIADEMUXER_FENTER();
 	GstPad *apppad = NULL;
@@ -255,7 +255,7 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 			gst_object_unref(apppad);
 			return MD_ERROR;
 		}
-		gst_bin_add_many(GST_BIN(pipeline),parse_element, NULL);
+		gst_bin_add_many(GST_BIN(pipeline), parse_element, NULL);
 		MEDIADEMUXER_SET_STATE(parse_element, GST_STATE_PAUSED, ERROR);
 
 		parse_sink_pad = gst_element_get_static_pad(parse_element, "sink");
@@ -266,22 +266,21 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 			return MD_ERROR;
 		}
 
-		/* Link demuxer pad with sink pad of parse element*/
+		/* Link demuxer pad with sink pad of parse element */
 		MEDIADEMUXER_LINK_PAD(pad, parse_sink_pad, ERROR);
 
-		outcaps = gst_caps_new_simple("video/x-h264", "stream-format",G_TYPE_STRING, "byte-stream", NULL);
+		outcaps = gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING, "byte-stream", NULL);
 		gst_element_link_filtered(parse_element, temp->appsink, outcaps);
 	} else {
 		MEDIADEMUXER_LINK_PAD(pad, apppad, ERROR);
 	}
-	/*gst_pad_link(pad, fpad) */
+	/* gst_pad_link(pad, fpad) */
 	if (*head == NULL) {
 		*head = temp;
 	} else {
 		track *prev = *head;
-		while (prev->next) {
+		while (prev->next)
 			prev = prev->next;
-		}
 		prev->next = temp;
 	}
 	gst_object_unref(apppad);
@@ -368,11 +367,10 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 			MD_E("fail to get typefind src pad.\n");
 			goto ERROR;
 		}
-		if (!id3tag) {
+		if (!id3tag)
 			aud_pad = gst_element_get_static_pad(gst_handle->demux, "sink");
-		} else {
+		else
 			aud_pad = gst_element_get_static_pad(id3tag, "sink");
-		}
 		if (!aud_pad) {
 			MD_E("fail to get audio parse sink pad.\n");
 			goto ERROR;
@@ -401,7 +399,7 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 			gst_object_unref(fake_pad);
 	}
 
-	/* calling "on_pad_added" function to set the caps*/
+	/* calling "on_pad_added" function to set the caps */
 	aud_srcpad = gst_element_get_static_pad(gst_handle->demux, "src");
 	if (!aud_srcpad) {
 		MD_E("fail to get audioparse source pad.\n");
@@ -423,14 +421,13 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 		gst_object_unref(aud_srcpad);
 
 	trck = head_track->head;
-	while (aud_srcpad != trck->pad && trck != NULL) {
+	while (aud_srcpad != trck->pad && trck != NULL)
 		trck = trck->next;
-	}
 	if (trck != NULL) {
 		trck->caps = caps;
 		trck->caps_string = gst_caps_to_string(trck->caps);
-		MD_I("caps set to %s\n",trck->caps_string);
-		g_strlcpy(name,"audio",strlen(name));
+		MD_I("caps set to %s\n", trck->caps_string);
+		g_strlcpy(name, "audio", strlen(name));
 		trck->name = name;
 	}
 	(head_track->num_audio_track)++;
@@ -454,7 +451,7 @@ ERROR:
 }
 
 static void __gst_cb_typefind(GstElement *tf, guint probability,
-                  GstCaps *caps, gpointer data)
+					GstCaps *caps, gpointer data)
 {
 	MEDIADEMUXER_FENTER();
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) data;
@@ -474,11 +471,11 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 				goto ERROR;
 			} else {
 				g_signal_connect(gst_handle->demux, "pad-added",
-				                 G_CALLBACK(__gst_on_pad_added), gst_handle);
+								G_CALLBACK(__gst_on_pad_added), gst_handle);
 				g_signal_connect(gst_handle->demux, "no-more-pads",
-				                 G_CALLBACK(__gst_no_more_pad), gst_handle);
+								G_CALLBACK(__gst_no_more_pad), gst_handle);
 				gst_bin_add_many(GST_BIN(gst_handle->pipeline),
-				                 gst_handle->demux, NULL);
+								gst_handle->demux, NULL);
 				pad = gst_element_get_static_pad(gst_handle->typefind, "src");
 				if (!pad) {
 					MD_E("fail to get typefind src pad.\n");
@@ -497,7 +494,7 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 				gst_pad_unlink(pad, fake_pad);
 				MEDIADEMUXER_LINK_PAD(pad, qt_pad, ERROR);
 				MEDIADEMUXER_SET_STATE(gst_handle->demux,
-				                       GST_STATE_PAUSED, ERROR);
+									GST_STATE_PAUSED, ERROR);
 				if (pad)
 					gst_object_unref(pad);
 				if (qt_pad)
@@ -571,7 +568,7 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 		goto ERROR;
 	}
 	g_signal_connect(gst_handle->typefind, "have-type",
-	                 G_CALLBACK(__gst_cb_typefind), gst_handle);
+					G_CALLBACK(__gst_cb_typefind), gst_handle);
 	gst_handle->fakesink = gst_element_factory_make("fakesink", NULL);
 	if (!gst_handle->fakesink) {
 		MD_E("fakesink creation failed");
@@ -581,14 +578,14 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 
 	/* Build the pipeline */
 	gst_bin_add_many(GST_BIN(gst_handle->pipeline),
-                                                            gst_handle->filesrc,
-                                                            gst_handle->typefind,
-                                                            gst_handle->fakesink,
-                                                            NULL);
+						gst_handle->filesrc,
+						gst_handle->typefind,
+						gst_handle->fakesink,
+						NULL);
 	gst_element_link_many(gst_handle->filesrc,
-                                                     gst_handle->typefind,
-                                                     gst_handle->fakesink,
-                                                     NULL);
+							gst_handle->typefind,
+							gst_handle->fakesink,
+							NULL);
 
 	/* connect signals, bus watcher */
 	bus = gst_pipeline_get_bus(GST_PIPELINE(gst_handle->pipeline));
@@ -640,9 +637,9 @@ static int gst_demuxer_get_data_count(MMHandleType pHandle, int *count)
 	mdgst_handle_t *new_mediademuxer = (mdgst_handle_t *) pHandle;
 
 	*count = (new_mediademuxer->info).num_video_track +
-	         (new_mediademuxer->info).num_audio_track +
-	         (new_mediademuxer->info).num_subtitle_track +
-	         (new_mediademuxer->info).num_other_track;
+			(new_mediademuxer->info).num_audio_track +
+			(new_mediademuxer->info).num_subtitle_track +
+			(new_mediademuxer->info).num_other_track;
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
@@ -680,7 +677,7 @@ static int gst_demuxer_set_track(MMHandleType pHandle, int track)
 	}
 	new_mediademuxer->selected_tracks[track] = true;
 	_gst_set_appsink((((mdgst_handle_t *) pHandle)->info).head, track,
-	                 new_mediademuxer->total_tracks);
+					new_mediademuxer->total_tracks);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
@@ -698,7 +695,7 @@ static int gst_demuxer_start(MMHandleType pHandle)
 	int indx;
 	for (indx = 0; indx < gst_handle->total_tracks; indx++) {
 		MD_I("track indx[%d] is marked as [%d]. (0- not selected, 1= selected)\n",
-		     indx, gst_handle->selected_tracks[indx]);
+			indx, gst_handle->selected_tracks[indx]);
 		/*
 		if (gst_handle->selected_tracks[indx] ==  false)
 			_gst_demuxer_unset(pHandle, indx);
@@ -707,15 +704,15 @@ static int gst_demuxer_start(MMHandleType pHandle)
 
 	track_info *head_track = &(gst_handle->info);
 	MD_I("Total Audio track=%d, Video track=%d, text track=%d\n",
-	     head_track->num_audio_track, head_track->num_video_track,
-	     head_track->num_subtitle_track);
+			head_track->num_audio_track, head_track->num_video_track,
+			head_track->num_subtitle_track);
 
 	track *temp = head_track->head;
 	indx = 0;
 	while (temp) {
 		MD_I("Got one element %p\n", temp->appsink);
 		if (gst_element_set_state(temp->appsink, GST_STATE_PLAYING) ==
-		    GST_STATE_CHANGE_FAILURE) {
+			GST_STATE_CHANGE_FAILURE) {
 			MD_E("Failed to set into PLAYING state");
 			ret = MD_ERROR_UNKNOWN;
 		}
@@ -798,84 +795,79 @@ int _set_mime_audio(media_format_h format, track *head)
 		goto ERROR;
 	}
 
-	if (gst_structure_has_name(struc, "application/x-id3")) {
+	if (gst_structure_has_name(struc, "application/x-id3"))
 		id3_flag = 1;
-	}
 	if (gst_structure_has_name(struc, "audio/mpeg") || id3_flag) {
 		gint mpegversion;
 		int layer;
 		gst_structure_get_int(struc, "mpegversion", &mpegversion);
-		if (mpegversion == 4 || mpegversion == 2 ) {
+		if (mpegversion == 4 || mpegversion == 2) {
 			gst_structure_get_int(struc, "channels", &channels);
 			gst_structure_get_int(struc, "rate", &rate);
 			gst_structure_get_int(struc, "bit", &bit);
 			stream_format = gst_structure_get_string(struc, "stream-format");
 			if (media_format_set_audio_mime(format, MEDIA_FORMAT_AAC_LC))
 				goto ERROR;
-			if(channels == 0)
-				channels = 2; /* default */
+			if (channels == 0)
+				channels = 2;	/* default */
 			if (media_format_set_audio_channel(format, channels))
 				goto ERROR;
-			if(rate == 0)
-				rate = 44100; /* default */
+			if (rate == 0)
+				rate = 44100;	/* default */
 			if (media_format_set_audio_samplerate(format, rate))
 				goto ERROR;
-			if(bit == 0) {
-				bit = 16; /* default */
-			}
-			if (media_format_set_audio_bit(format, bit)) {
+			if (bit == 0)
+				bit = 16;	/* default */
+			if (media_format_set_audio_bit(format, bit))
 				goto ERROR;
-			}
 			if (strncmp(stream_format, "adts", 4) == 0)
 				media_format_set_audio_aac_type(format, 1);
 			else
 				media_format_set_audio_aac_type(format, 0);
 		}
-		if (mpegversion == 1 || id3_flag ) {
+		if (mpegversion == 1 || id3_flag) {
 			gst_structure_get_int(struc, "layer", &layer);
-			if((layer == 3) || (id3_flag == 1)) {
+			if ((layer == 3) || (id3_flag == 1)) {
 				gst_structure_get_int(struc, "channels", &channels);
 				gst_structure_get_int(struc, "rate", &rate);
 				gst_structure_get_int(struc, "bit", &bit);
 				if (media_format_set_audio_mime(format, MEDIA_FORMAT_MP3))
 					goto ERROR;
-				if(channels == 0)
-					channels = 2; /* default */
+				if (channels == 0)
+					channels = 2;	/* default */
 				if (media_format_set_audio_channel(format, channels))
 					goto ERROR;
-				if(rate == 0)
-					rate = 44100; /* default */
-				if(bit == 0)
-					bit = 16; /* default */
+				if (rate == 0)
+					rate = 44100;	/* default */
+				if (bit == 0)
+					bit = 16;	/* default */
 				if (media_format_set_audio_samplerate(format, rate))
 					goto ERROR;
 				if (media_format_set_audio_bit(format, bit))
 					goto ERROR;
-			}
-			else {
-				MD_I("No Support for MPEG%d Layer %d media\n",mpegversion,layer);
+			} else {
+				MD_I("No Support for MPEG%d Layer %d media\n", mpegversion, layer);
 				goto ERROR;
 			}
 		}
-	}else if (gst_structure_has_name(struc, "audio/x-amr-nb-sh") ||
+	} else if (gst_structure_has_name(struc, "audio/x-amr-nb-sh") ||
 		gst_structure_has_name(struc, "audio/x-amr-wb-sh")) {
 		media_format_mimetype_e mime_type;
 		gst_structure_get_int(struc, "channels", &channels);
 		gst_structure_get_int(struc, "rate", &rate);
 		if (gst_structure_has_name(struc, "audio/x-amr-nb-sh")) {
-			mime_type= MEDIA_FORMAT_AMR_NB;
+			mime_type = MEDIA_FORMAT_AMR_NB;
 			rate = 8000;
-		}
-		else {
+		} else {
 			mime_type = MEDIA_FORMAT_AMR_WB;
 			rate = 16000;
 		}
-		if (media_format_set_audio_mime(format,mime_type))
+		if (media_format_set_audio_mime(format, mime_type))
 			goto ERROR;
-		if(channels == 0)
-			channels = 1; /* default */
-		if(bit == 0)
-			bit = 16; /* default */
+		if (channels == 0)
+			channels = 1;	/* default */
+		if (bit == 0)
+			bit = 16;	/* default */
 		if (media_format_set_audio_channel(format, channels))
 			goto ERROR;
 		if (media_format_set_audio_samplerate(format, rate))
@@ -888,14 +880,14 @@ int _set_mime_audio(media_format_h format, track *head)
 		gst_structure_get_int(struc, "bit", &bit);
 		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_NB))
 			goto ERROR;
-		if(channels == 0)
-			channels = 1; /* default */
+		if (channels == 0)
+			channels = 1;	/* default */
 		if (media_format_set_audio_channel(format, channels))
 			goto ERROR;
 		if (media_format_set_audio_samplerate(format, rate))
 			goto ERROR;
 		if (bit == 0)
-			bit = 16; /* default */
+			bit = 16;	/* default */
 		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
 	} else if (gst_structure_has_name(struc, "audio/AMR-WB")) {
@@ -904,14 +896,14 @@ int _set_mime_audio(media_format_h format, track *head)
 		gst_structure_get_int(struc, "bit", &bit);
 		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_WB))
 			goto ERROR;
-		if(channels == 0)
-			channels = 1; /* default */
+		if (channels == 0)
+			channels = 1;	/* default */
 		if (media_format_set_audio_channel(format, channels))
 			goto ERROR;
 		if (media_format_set_audio_samplerate(format, rate))
 			goto ERROR;
 		if (bit == 0)
-			bit = 16; /* default */
+			bit = 16;	/* default */
 		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
 	} else {
@@ -926,7 +918,7 @@ ERROR:
 }
 
 static int gst_demuxer_get_track_info(MMHandleType pHandle,
-                                      media_format_h *format, int index)
+							media_format_h *format, int index)
 {
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
@@ -938,17 +930,17 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 	int count = 0;
 	temp = (new_mediademuxer->info).head;
 	loop = (new_mediademuxer->info).num_video_track +
-	       (new_mediademuxer->info).num_audio_track +
-	       (new_mediademuxer->info).num_subtitle_track +
-	       (new_mediademuxer->info).num_other_track;
+			(new_mediademuxer->info).num_audio_track +
+			(new_mediademuxer->info).num_subtitle_track +
+			(new_mediademuxer->info).num_other_track;
 	if (index >= loop || index < 0) {
 		MD_E("total tracks(loop) is less then selected track(index), So not support this track");
 		goto ERROR;
 	}
 
 	ret = media_format_create(format);
-	if(ret != MEDIA_FORMAT_ERROR_NONE){
-		MD_E("Mediaformat creation failed. returned %d\n",ret);
+	if (ret != MEDIA_FORMAT_ERROR_NONE) {
+		MD_E("Mediaformat creation failed. returned %d\n", ret);
 		ret = MD_INTERNAL_ERROR;
 		goto ERROR;
 	}
@@ -965,9 +957,8 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 	} else if (temp->name[0] == 'v') {
 		MD_I("Setting for Video \n");
 		_set_mime_video(*format, temp);
-	} else {
+	} else
 		MD_I("Not supported so far (except audio and video)\n");
-	}
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
@@ -976,7 +967,7 @@ ERROR:
 }
 
 static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
-                                         GstBuffer *buffer, char *codec_data)
+							GstBuffer *buffer, char *codec_data)
 {
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
@@ -990,7 +981,7 @@ static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
 		ret = MD_ERROR_UNKNOWN;
 		goto ERROR;
 	}
-	/* copy data*/
+	/* copy data */
 	media_packet_get_buffer_size(out_pkt, &size);
 	MD_I("Media packet Buffer capacity: %llu GST Buffer size = %d\n", size, map.size);
 	if (size < (uint64_t)map.size) {
@@ -1021,12 +1012,12 @@ static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
 		ret = MD_ERROR_UNKNOWN;
 		goto ERROR;
 	}
-	if (media_packet_set_buffer_size(out_pkt,  gst_buffer_get_size(buffer))) {
+	if (media_packet_set_buffer_size(out_pkt, gst_buffer_get_size(buffer))) {
 		MD_E("unable to set the buffer size\n");
 		ret = MD_ERROR_UNKNOWN;
 		goto ERROR;
 	}
-	if (media_packet_set_flags(out_pkt,  GST_BUFFER_FLAGS(buffer))) {
+	if (media_packet_set_flags(out_pkt, GST_BUFFER_FLAGS(buffer))) {
 		MD_E("unable to set the buffer size\n");
 		ret = MD_ERROR_UNKNOWN;
 		goto ERROR;
@@ -1045,7 +1036,7 @@ ERROR:
 }
 
 static int gst_demuxer_read_sample(MMHandleType pHandle,
-                                   media_packet_h *outbuf, int track_indx)
+						media_packet_h *outbuf, int track_indx)
 {
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
@@ -1066,7 +1057,7 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		goto ERROR;
 	}
 	while (atrack) {
-		if (indx == track_indx)  /*Got the requird track details*/
+		if (indx == track_indx)  /* Got the requird track details */
 			break;
 		if (atrack->next) {
 			track *next = atrack->next;
@@ -1096,8 +1087,7 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 			ret = MD_ERROR;
 			goto ERROR;
 		}
-	}
-	else if (atrack->name[0] == 'v'){
+	} else if (atrack->name[0] == 'v') {
 		 if (media_format_create(&mediafmt)) {
 			MD_E("media_format_create failed\n");
 			ret = MD_ERROR;
@@ -1125,8 +1115,7 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 			ret = MD_ERROR;
 			goto ERROR;
 		}
-	}
-	else {
+	} else {
 		MD_E("Invalid track format\n");
 		goto ERROR;
 	}
@@ -1159,9 +1148,8 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	/* Create the codec data and pass to _gst_copy_buf_to_media_packet() to add into the media packet */
 	temp_codec_data = strstr(atrack->caps_string, "codec_data");
 	if (temp_codec_data != NULL) {
-		while (*temp_codec_data != ')') {
+		while (*temp_codec_data != ')')
 			temp_codec_data++;
-		}
 		temp_codec_data++; /* to esacpe ')' */
 		codec_data = (char*) malloc(sizeof(char)*strlen(temp_codec_data));
 		if (codec_data != NULL) {
@@ -1265,7 +1253,7 @@ static int gst_demuxer_unset_track(MMHandleType pHandle, int track)
 	}
 	new_mediademuxer->selected_tracks[track] = false;
 	_gst_unset_appsink((((mdgst_handle_t *) pHandle)->info).head, track,
-	                   new_mediademuxer->total_tracks);
+					new_mediademuxer->total_tracks);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
@@ -1302,9 +1290,8 @@ void  _gst_clear_struct(mdgst_handle_t *gst_handle)
 		g_free(gst_handle->selected_tracks);
 		gst_handle->selected_tracks = NULL;
 	}
-	if ((gst_handle->info).head) {
+	if ((gst_handle->info).head)
 		__gst_free_stuct(&(gst_handle->info).head);
-	}
 	MEDIADEMUXER_FLEAVE();
 }
 
@@ -1374,12 +1361,11 @@ int gst_set_error_cb(MMHandleType pHandle,
 		goto ERROR;
 	}
 
-	if(gst_handle->user_cb[_GST_EVENT_TYPE_ERROR]) {
+	if (gst_handle->user_cb[_GST_EVENT_TYPE_ERROR]) {
 		MD_E("Already set mediademuxer_error_cb\n");
 		ret = MD_ERROR_INVALID_ARGUMENT;
 		goto ERROR;
-	}
-	else {
+	} else {
 		if (!callback) {
 			MD_E("fail invaild argument (callback)\n");
 			ret = MD_ERROR_INVALID_ARGUMENT;

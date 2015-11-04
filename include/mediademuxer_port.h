@@ -503,7 +503,6 @@ int md_read_sample(MMHandleType demuxer, int track_indx, media_packet_h *outbuf)
  */
 int md_stop(MMHandleType demuxer);
 
-
 /**
  * This function destroy the pipeline
  *
@@ -561,4 +560,4 @@ int md_set_error_cb(MMHandleType demuxer, md_error_cb callback, void *user_data)
 #ifdef __cplusplus
 }
 #endif
-#endif /* __TIZEN_MEDIADEMUXER_PORT_H__ */
+#endif	/* __TIZEN_MEDIADEMUXER_PORT_H__ */

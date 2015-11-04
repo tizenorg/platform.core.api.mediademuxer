@@ -35,18 +35,18 @@ extern "C" {
 #endif
 #define LOG_TAG "TIZEN_N_MEDIADEMUXER"
 
-#define DEMUXER_CHECK_CONDITION(condition,error,msg)     \
-	if(condition) {} else \
-		{ LOGE("[%s] %s(0x%08x)",__FUNCTION__, msg,error); return error;}; \
+#define DEMUXER_CHECK_CONDITION(condition, error, msg)     \
+	if (condition) {} else \
+		{ LOGE("[%s] %s(0x%08x)", __FUNCTION__, msg, error); return error; }; \
 
 #define DEMUXER_INSTANCE_CHECK(demuxer)   \
-	DEMUXER_CHECK_CONDITION(demuxer != NULL, MEDIADEMUXER_ERROR_INVALID_PARAMETER,"DEMUXER_ERROR_INVALID_PARAMETER")
+	DEMUXER_CHECK_CONDITION(demuxer != NULL, MEDIADEMUXER_ERROR_INVALID_PARAMETER, "DEMUXER_ERROR_INVALID_PARAMETER")
 
-#define DEMUXER_STATE_CHECK(demuxer,expected_state)       \
-	DEMUXER_CHECK_CONDITION(demuxer->state == expected_state,MEDIADEMUXER_ERROR_INVALID_STATE,"DEMUXER_ERROR_INVALID_STATE")
+#define DEMUXER_STATE_CHECK(demuxer, expected_state)       \
+	DEMUXER_CHECK_CONDITION(demuxer->state == expected_state, MEDIADEMUXER_ERROR_INVALID_STATE, "DEMUXER_ERROR_INVALID_STATE")
 
 #define DEMUXER_NULL_ARG_CHECK(arg)      \
-	DEMUXER_CHECK_CONDITION(arg != NULL,MEDIADEMUXER_ERROR_INVALID_PARAMETER,"DEMUXER_ERROR_INVALID_PARAMETER")
+	DEMUXER_CHECK_CONDITION(arg != NULL, MEDIADEMUXER_ERROR_INVALID_PARAMETER, "DEMUXER_ERROR_INVALID_PARAMETER")
 
 /**
  * @brief Enumeration for media demuxer source type
@@ -54,14 +54,14 @@ extern "C" {
  */
 typedef enum {
 	MEDIADEMUXER_SRC_NONE = 0,		/**<  Not defined src type */
-	MEDIADEMUXER_SRC_FILE,          /**<  Local file src type */
-	MEDIADEMUXER_SRC_RTP,           	/**<  Rtp src type */
-	MEDIADEMUXER_SRC_WFD,           	/**<  Wfd src type */
-	MEDIADEMUXER_SRC_HTTP,          /**<  Http src type */
-	MEDIADEMUXER_SRC_SS,           	/**<  Smooth streaming src type */
-	MEDIADEMUXER_SRC_RTSP,           /**<  Rtsp src type */
-	MEDIADEMUXER_SRC_UNKNOWN,        /**< Unknown src type */
-	MEDIADEMUXER_SRC_INVALID         /**<  Invalid src type */
+	MEDIADEMUXER_SRC_FILE,		/**<  Local file src type */
+	MEDIADEMUXER_SRC_RTP,		/**<  Rtp src type */
+	MEDIADEMUXER_SRC_WFD,		/**<  Wfd src type */
+	MEDIADEMUXER_SRC_HTTP,		/**<  Http src type */
+	MEDIADEMUXER_SRC_SS,		/**<  Smooth streaming src type */
+	MEDIADEMUXER_SRC_RTSP,		/**<  Rtsp src type */
+	MEDIADEMUXER_SRC_UNKNOWN,	/**< Unknown src type */
+	MEDIADEMUXER_SRC_INVALID	/**<  Invalid src type */
 } mediademuxer_src_type;
 
 typedef struct _mediademuxer_s {
@@ -80,7 +80,7 @@ typedef struct {
 	/* initialize values */
 	md_ini_t ini;
 	/* port specific handle */
-	/*Source information */
+	/* Source information */
 	char *uri_src;
 	mediademuxer_src_type uri_src_media_type;
 	MMHandleType mdport_handle;
@@ -91,4 +91,4 @@ int __convert_error_code(int code, char *func_name);
 #ifdef __cplusplus
 }
 #endif
-#endif /* __TIZEN_MEDIADEMUXER_PRIVATE_H__ */
+#endif	/* __TIZEN_MEDIADEMUXER_PRIVATE_H__ */

@@ -78,13 +78,12 @@ int md_create(MMHandleType *demuxer)
 	/* load ini files */
 	result = md_ini_load(&new_demuxer->ini);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_COURRPTED_INI, "can't load ini");
+									MD_COURRPTED_INI, "can't load ini");
 
 	register_port_func[new_demuxer->ini.port_type](pOps);
 	result = pOps->init(&new_demuxer->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_NOT_INITIALIZED,
-	                                 "md_create failed");
+									MD_NOT_INITIALIZED, "md_create failed");
 	*demuxer = (MMHandleType) new_demuxer;
 	MEDIADEMUXER_FLEAVE();
 	return result;
@@ -141,9 +140,8 @@ bool __md_util_is_sdp_file(const char *path)
 	MEDIADEMUXER_FENTER();
 	return_val_if_fail(path, FALSE);
 	uri = g_ascii_strdown(path, -1);
-	if (uri == NULL) {
+	if (uri == NULL)
 		return FALSE;
-	}
 	/* trimming */
 	g_strstrip(uri);
 	/* strlen(".sdp") == 4 */
@@ -154,9 +152,8 @@ bool __md_util_is_sdp_file(const char *path)
 	/* first, check extension name */
 	ret = g_str_has_suffix(uri, "sdp");
 	/* second, if no suffix is there, check it's contents */
-	if (!ret) {
+	if (!ret)
 		/* FIXIT : do it soon */
-	}
 	g_free(uri);
 	uri = NULL;
 	MEDIADEMUXER_FLEAVE();
@@ -185,11 +182,10 @@ mediademuxer_src_type __md_util_media_type(char **uri)
 		}
 	} else if ((path = strstr(*uri, "rtsp://"))) {
 		if (strlen(path)) {
-			if ((path = strstr(*uri, "/wfd1.0/"))) {
+			if ((path = strstr(*uri, "/wfd1.0/")))
 				return (MEDIADEMUXER_SRC_WFD);
-			} else {
+			else
 				return (MEDIADEMUXER_SRC_RTSP);
-			}
 		}
 	} else if ((path = strstr(*uri, "http://"))) {
 		if (strlen(path)) {
@@ -284,8 +280,8 @@ int md_set_data_source(MMHandleType demuxer, const char *uri)
 	MEDIADEMUXER_CHECK_NULL(demuxer);
 	result = _md_util_parse(demuxer, (const char *)uri);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR_INVALID_ARGUMENT,
-	                                 "error while parsing the file");
+									MD_ERROR_INVALID_ARGUMENT,
+									"error while parsing the file");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -304,7 +300,7 @@ int md_prepare(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->prepare(md_handle->mdport_handle, md_handle->uri_src);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing prepare");
+									MD_ERROR, "error while doing prepare");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -323,8 +319,8 @@ int md_get_track_count(MMHandleType demuxer, int *count)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->get_track_count(md_handle->mdport_handle, count);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE,
-	                                 result, MD_ERROR,
-	                                 "error while getting track count");
+									result, MD_ERROR,
+									"error while getting track count");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -343,7 +339,7 @@ int md_select_track(MMHandleType demuxer, int track)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->set_track(md_handle->mdport_handle, track);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error select track");
+									MD_ERROR, "error select track");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -362,7 +358,7 @@ int md_start(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->start(md_handle->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing start");
+									MD_ERROR, "error while doing start");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -381,8 +377,8 @@ int md_get_track_info(MMHandleType demuxer, int track, media_format_h *format)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->get_track_info(md_handle->mdport_handle, format, track);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE,
-	                                 result, MD_ERROR,
-	                                 "error while getting track count");
+									result, MD_ERROR,
+									"error while getting track count");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -423,7 +419,7 @@ int md_seek(MMHandleType demuxer, int64_t pos)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->seek(md_handle->mdport_handle, pos);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing seek");
+									MD_ERROR, "error while doing seek");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -442,7 +438,7 @@ int md_unselect_track(MMHandleType demuxer, int track)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->unset_track(md_handle->mdport_handle, track);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error unselect track");
+									MD_ERROR, "error unselect track");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -461,7 +457,7 @@ int md_stop(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->stop(md_handle->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing stop");
+									MD_ERROR, "error while doing stop");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -480,7 +476,7 @@ int md_unprepare(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->unprepare(md_handle->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing stop");
+									MD_ERROR, "error while doing stop");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:
@@ -499,7 +495,7 @@ int md_destroy(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->destroy(md_handle->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
-	                                 MD_ERROR, "error while doing destroy");
+									MD_ERROR, "error while doing destroy");
 
 	/* free mediademuxer structure */
 	if (md_handle) {
@@ -509,7 +505,7 @@ int md_destroy(MMHandleType demuxer)
 		}
 		if (md_handle->uri_src) {
 			MD_I("md_destroy deallocating md_handle->uri_src %p:\n",
-			     md_handle->uri_src);
+				md_handle->uri_src);
 			g_free((void *)(md_handle->uri_src));
 		}
 		MD_I("md_destroy deallocating md_handle %p:\n", md_handle);
@@ -532,7 +528,7 @@ int md_set_error_cb(MMHandleType demuxer,
 	MEDIADEMUXER_CHECK_NULL(md_handle);
 	media_port_demuxer_ops *pOps = md_handle->demuxer_ops;
 	MEDIADEMUXER_CHECK_NULL(pOps);
-	result = pOps->set_error_cb(md_handle->mdport_handle, callback,user_data);
+	result = pOps->set_error_cb(md_handle->mdport_handle, callback, user_data);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
 			MD_ERROR, "error while setting error call back");
 	MEDIADEMUXER_FLEAVE();

@@ -48,7 +48,7 @@ int mediademuxer_create(mediademuxer_h *demuxer)
 			handle->demux_state = MEDIADEMUXER_NONE;
 		} else {
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_OUT_OF_MEMORY(0x%08x)",
-			    __FUNCTION__, MEDIADEMUXER_ERROR_OUT_OF_MEMORY);
+				__FUNCTION__, MEDIADEMUXER_ERROR_OUT_OF_MEMORY);
 			return MEDIADEMUXER_ERROR_OUT_OF_MEMORY;
 		}
 	} else {
@@ -89,13 +89,13 @@ int mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 	} else {
 		if (!path) {
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-			    __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_PATH);
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_PATH);
 			return MEDIADEMUXER_ERROR_INVALID_PATH;
 		} else {
-			if(handle->demux_state != MEDIADEMUXER_IDLE)
+			if (handle->demux_state != MEDIADEMUXER_IDLE)
 				return MEDIADEMUXER_ERROR_INVALID_STATE;
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-			    __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 		}
 	}
@@ -114,10 +114,10 @@ int mediademuxer_prepare(mediademuxer_h demuxer)
 		if (ret == MEDIADEMUXER_ERROR_NONE)
 			handle->demux_state = MEDIADEMUXER_READY;
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_IDLE)
+		if (handle->demux_state != MEDIADEMUXER_IDLE)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -133,10 +133,10 @@ int mediademuxer_get_track_count(mediademuxer_h demuxer, int *count)
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_get_track_count((MMHandleType) (handle->md_handle), count);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -152,10 +152,10 @@ int mediademuxer_select_track(mediademuxer_h demuxer, int track_index)
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_select_track((MMHandleType) (handle->md_handle), track_index);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -173,17 +173,17 @@ int mediademuxer_start(mediademuxer_h demuxer)
 		if (ret == MEDIADEMUXER_ERROR_NONE)
 			handle->demux_state = MEDIADEMUXER_DEMUXING;
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
 }
 
 int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index,
-                                media_format_h *format)
+							media_format_h *format)
 {
 	MD_I("mediademuxer_get_track_info\n");
 	mediademuxer_error_e ret;
@@ -198,33 +198,32 @@ int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index,
 		|| handle->demux_state == MEDIADEMUXER_DEMUXING)) {
 		ret = md_get_track_info((MMHandleType) (handle->md_handle), track_index, format);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
 }
 
 int mediademuxer_read_sample(mediademuxer_h demuxer, int track_index,
-                             media_packet_h *outbuf)
+							media_packet_h *outbuf)
 {
 	MD_I("mediademuxer_read_sample\n");
 	mediademuxer_error_e ret;
 	DEMUXER_INSTANCE_CHECK(demuxer);
 	mediademuxer_s *handle;
 	handle = (mediademuxer_s *)(demuxer);
-	if (outbuf == NULL || track_index < 0) {
+	if (outbuf == NULL || track_index < 0)
 		return MEDIADEMUXER_ERROR_INVALID_PARAMETER;
-	}
 	if (handle && handle->demux_state == MEDIADEMUXER_DEMUXING) {
 		ret = md_read_sample((MMHandleType) (handle->md_handle), track_index, outbuf);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_DEMUXING)
+		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -240,10 +239,10 @@ int mediademuxer_seek(mediademuxer_h demuxer, int64_t pos)
 	if (handle && handle->demux_state == MEDIADEMUXER_DEMUXING) {
 		ret = md_seek((MMHandleType) (handle->md_handle), pos);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_DEMUXING)
+		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -260,10 +259,10 @@ int mediademuxer_unselect_track(mediademuxer_h demuxer, int track_index)
 		|| handle->demux_state == MEDIADEMUXER_DEMUXING)) {
 		ret = md_unselect_track((MMHandleType) (handle->md_handle), track_index);
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -281,10 +280,10 @@ int mediademuxer_stop(mediademuxer_h demuxer)
 		if (ret == MEDIADEMUXER_ERROR_NONE)
 			handle->demux_state = MEDIADEMUXER_READY;
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_DEMUXING)
+		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-		     __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	return ret;
@@ -302,7 +301,7 @@ int mediademuxer_unprepare(mediademuxer_h demuxer)
 		if (ret == MEDIADEMUXER_ERROR_NONE)
 			handle->demux_state = MEDIADEMUXER_IDLE;
 	} else {
-		if(handle->demux_state != MEDIADEMUXER_READY)
+		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
 			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
@@ -322,7 +321,7 @@ int mediademuxer_destroy(mediademuxer_h demuxer)
 		ret = md_destroy(handle->md_handle);
 		if (ret != MEDIADEMUXER_ERROR_NONE) {
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-			    __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 		} else {
 			MD_E("[CoreAPI][%s] destroy handle : %p", __FUNCTION__,
@@ -330,7 +329,7 @@ int mediademuxer_destroy(mediademuxer_h demuxer)
 		}
 	} else {
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
-			    __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+				 __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
 	handle->demux_state = MEDIADEMUXER_NONE;
@@ -382,18 +381,16 @@ int mediademuxer_unset_error_cb(mediademuxer_h demuxer)
 
 static gboolean _mediademuxer_error_cb(mediademuxer_error_e error, void *user_data)
 {
-	if(user_data == NULL){
-		MD_I("_mediademuxer_error_cb: ERROR %d to report. But call back is not set\n",error);
+	if (user_data == NULL) {
+		MD_I("_mediademuxer_error_cb: ERROR %d to report. But call back is not set\n", error);
 		return 0;
 	}
 	mediademuxer_s * handle = (mediademuxer_s *) user_data;
-	if(handle->demux_state != MEDIADEMUXER_IDLE)
+	if (handle->demux_state != MEDIADEMUXER_IDLE)
 		return MEDIADEMUXER_ERROR_INVALID_STATE;
-	if ( handle->error_cb ) {
+	if (handle->error_cb)
 		((mediademuxer_error_cb)handle->error_cb)(error, handle->error_cb_userdata);
-	}
-	else {
-		MD_I("_mediademuxer_error_cb: ERROR %d to report. But call back is not set\n",error);
-	}
+	else
+		MD_I("_mediademuxer_error_cb: ERROR %d to report. But call back is not set\n", error);
 	return 0;
 }

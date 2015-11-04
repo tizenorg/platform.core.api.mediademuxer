@@ -41,70 +41,56 @@ static gboolean _generate_default_ini(void);
 static void _md_ini_check_ini_status(void);
 
 /* macro */
-#define MEDIADEMUXER_INI_GET_STRING( x_dict, x_item, x_ini, x_default ) \
-	do \
-	{ \
+#define MEDIADEMUXER_INI_GET_STRING(x_dict, x_item, x_ini, x_default) \
+	do { \
 		gchar* str = iniparser_getstring(x_dict, x_ini, x_default); \
 		\
-		if ( str &&  \
-		     ( strlen( str ) > 0 ) && \
-		     ( strlen( str ) < MEDIADEMUXER_INI_MAX_STRLEN ) ) \
-		{ \
-			strcpy ( x_item, str ); \
+		if (str &&  \
+		     (strlen(str) > 0) && \
+		     (strlen(str) < MEDIADEMUXER_INI_MAX_STRLEN)) { \
+			strcpy(x_item, str); \
+		} else { \
+			strcpy(x_item, x_default); \
 		} \
-		else \
-		{ \
-			strcpy ( x_item, x_default ); \
-		} \
-	}while(0)
+	} while (0)
 
-#define MEDIADEMUXER_INI_GET_COLOR( x_dict, x_item, x_ini, x_default ) \
-	do \
-	{ \
+#define MEDIADEMUXER_INI_GET_COLOR(x_dict, x_item, x_ini, x_default) \
+	do { \
 		gchar* str = iniparser_getstring(x_dict, x_ini, x_default); \
 		\
-		if ( str &&  \
-		     ( strlen( str ) > 0 ) && \
-		     ( strlen( str ) < MEDIADEMUXER_INI_MAX_STRLEN ) ) \
-		{ \
+		if (str &&  \
+		     (strlen(str) > 0) && \
+		     (strlen(str) < MEDIADEMUXER_INI_MAX_STRLEN)) { \
 			x_item = (guint) strtoul(str, NULL, 16); \
-		} \
-		else \
-		{ \
+		} else { \
 			x_item = (guint) strtoul(x_default, NULL, 16); \
 		} \
-	}while(0)
+	} while (0)
 
 /* x_ini is the list of index to set TRUE at x_list[index] */
-#define MEDIADEMUXER_INI_GET_BOOLEAN_FROM_LIST( x_dict, x_list, x_list_max, x_ini, x_default ) \
-	do \
-	{ \
+#define MEDIADEMUXER_INI_GET_BOOLEAN_FROM_LIST(x_dict, x_list, x_list_max, x_ini, x_default) \
+	do { \
 		int index = 0; \
 		const char *delimiters = " ,"; \
 		char *usr_ptr = NULL; \
 		char *token = NULL; \
 		gchar temp_arr[MEDIADEMUXER_INI_MAX_STRLEN] = {0}; \
-		MMMEDIADEMUXER_INI_GET_STRING( x_dict, temp_arr, x_ini, x_default); \
-		token = strtok_r( temp_arr, delimiters, &usr_ptr ); \
-		while (token) \
-		{ \
+		MMMEDIADEMUXER_INI_GET_STRING(x_dict, temp_arr, x_ini, x_default); \
+		token = strtok_r(temp_arr, delimiters, &usr_ptr); \
+		while (token) { \
 			index = atoi(token); \
-			if (index < 0 || index > x_list_max -1) \
-			{ \
+			if (index < 0 || index > x_list_max -1) { \
 				MD_W("%d is not valid index\n", index); \
-			} \
-			else \
-			{ \
+			} else { \
 				x_list[index] = TRUE; \
 			} \
-			token = strtok_r( NULL, delimiters, &usr_ptr ); \
+			token = strtok_r(NULL, delimiters, &usr_ptr); \
 		} \
-	}while(0)
+	} while (0)
 
 /* x_ini is the list of value to be set at x_list[index] */
-#define MEDIADEMUXER_INI_GET_INT_FROM_LIST( x_dict, x_list, x_list_max, x_ini, x_default ) \
-	do \
-	{ \
+#define MEDIADEMUXER_INI_GET_INT_FROM_LIST(x_dict, x_list, x_list_max, x_ini, x_default) \
+	do { \
 		int index = 0; \
 		int value = 0; \
 		const char *delimiters = " ,"; \
@@ -112,23 +98,19 @@ static void _md_ini_check_ini_status(void);
 		char *token = NULL; \
 		gchar temp_arr[MEDIADEMUXER_INI_MAX_STRLEN] = {0}; \
 		MMMEDIADEMUXER_INI_GET_STRING(x_dict, temp_arr, x_ini, x_default); \
-		token = strtok_r( temp_arr, delimiters, &usr_ptr ); \
-		while (token) \
-		{ \
-			if ( index > x_list_max -1) \
-			{ \
+		token = strtok_r(temp_arr, delimiters, &usr_ptr); \
+		while (token) { \
+			if (index > x_list_max -1) { \
 				MD_E("%d is not valid index\n", index); \
 				break; \
-			} \
-			else \
-			{ \
+			} else { \
 				value = atoi(token); \
 				x_list[index] = value; \
 				index++; \
 			} \
-			token = strtok_r( NULL, delimiters, &usr_ptr ); \
+			token = strtok_r(NULL, delimiters, &usr_ptr); \
 		} \
-	}while(0)
+	} while (0)
 
 int md_ini_load(md_ini_t *ini)
 {
@@ -159,14 +141,11 @@ int md_ini_load(md_ini_t *ini)
 
 	if (dict) {		/* if dict is available */
 		/* general */
-		MEDIADEMUXER_INI_GET_STRING(dict, ini->port_name,
-		                            "port_in_use:mediademuxer_port",
-		                            DEFAULT_PORT);
+		MEDIADEMUXER_INI_GET_STRING(dict, ini->port_name, "port_in_use:mediademuxer_port", DEFAULT_PORT);
 	} else {		/* if dict is not available just fill the structure with default value */
 
 		MD_W("failed to load ini. using hardcoded default\n");
-		strncpy(ini->port_name, DEFAULT_PORT,
-		        MEDIADEMUXER_INI_MAX_STRLEN - 1);
+		strncpy(ini->port_name, DEFAULT_PORT, MEDIADEMUXER_INI_MAX_STRLEN - 1);
 	}
 
 	if (0 == strcmp(ini->port_name, "GST_PORT"))
@@ -208,9 +187,8 @@ static void _md_ini_check_ini_status(void)
 		if (ini_buff.st_size < 5) {
 			MD_W("demuxer.ini file size=%d, Corrupted! So, Removed\n", (int)ini_buff.st_size);
 
-			if (g_remove(MEDIADEMUXER_INI_DEFAULT_PATH) == -1) {
+			if (g_remove(MEDIADEMUXER_INI_DEFAULT_PATH) == -1)
 				MD_E("failed to delete corrupted ini");
-			}
 		}
 	}
 }
@@ -224,13 +202,12 @@ static gboolean _generate_default_ini(void)
 	/* create new file */
 	fp = fopen(MEDIADEMUXER_INI_DEFAULT_PATH, "wt");
 
-	if (!fp) {
+	if (!fp)
 		return FALSE;
-	}
 
 	/* writing default ini file */
 	if (strlen(default_ini) !=
-	    fwrite(default_ini, 1, strlen(default_ini), fp)) {
+		fwrite(default_ini, 1, strlen(default_ini), fp)) {
 		fclose(fp);
 		return FALSE;
 	}
@@ -240,4 +217,4 @@ static gboolean _generate_default_ini(void)
 }
 #endif
 
-#endif /* #ifdef _MEDIADEMUXER_INI_C_ */
+#endif	/* #ifdef _MEDIADEMUXER_INI_C_ */
