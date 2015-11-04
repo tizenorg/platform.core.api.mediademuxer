@@ -56,14 +56,14 @@
  * while(EOS) {
  *	if(track1 is set) {
  *		mediademuxer_read_sample();
- * 		if(seek_request)
+ *		if(seek_request)
  *			mediademuxer_seek();
- * 	}
+ *	}
  *	else if(track2 is set) {
  *		 mediademuxer_read_sample();
- * 	}
- * 	if(track2_not_needed)
- * 		mediademuxer_unselect_track(track2);
+ *	}
+ *	if(track2_not_needed)
+ *		mediademuxer_unselect_track(track2);
  *  }
  * </pre>
  * mediademuxer_stop()<br>

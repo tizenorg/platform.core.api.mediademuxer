@@ -28,12 +28,11 @@
 static int custom_demuxer_init(MMHandleType *pHandle);
 static int custom_demuxer_prepare(MMHandleType pHandle, char *uri);
 static int custom_demuxer_get_data_count(MMHandleType pHandle, int *count);
-static int custom_demuxer_get_track_info(MMHandleType pHandle,
-                                         media_format_h *format, int track);
+static int custom_demuxer_get_track_info(MMHandleType pHandle, media_format_h *format, int track);
 static int custom_demuxer_set_track(MMHandleType pHandle, int track);
 static int custom_demuxer_get_data(MMHandleType pHandle, char *buffer);
 
-/*Media Demuxer API common*/
+/* Media Demuxer API common */
 static media_port_demuxer_ops def_demux_ops = {
 	.n_size = 0,
 	.init = custom_demuxer_init,
@@ -52,9 +51,7 @@ int custom_port_register(media_port_demuxer_ops *pOps)
 
 	def_demux_ops.n_size = sizeof(def_demux_ops);
 
-	memcpy((char *)pOps + sizeof(pOps->n_size),
-	       (char *)&def_demux_ops + sizeof(def_demux_ops.n_size),
-	       pOps->n_size - sizeof(pOps->n_size));
+	memcpy((char *)pOps + sizeof(pOps->n_size), (char *)&def_demux_ops + sizeof(def_demux_ops.n_size), pOps->n_size - sizeof(pOps->n_size));
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
@@ -80,7 +77,6 @@ static int custom_demuxer_prepare(MMHandleType pHandle, char *uri)
 	return 0;
 }
 
-
 static int custom_demuxer_get_data_count(MMHandleType pHandle, int *count)
 {
 	MEDIADEMUXER_FENTER();
@@ -89,8 +85,7 @@ static int custom_demuxer_get_data_count(MMHandleType pHandle, int *count)
 	return 0;
 }
 
-static int custom_demuxer_get_track_info(MMHandleType pHandle,
-                                         media_format_h *format, int track)
+static int custom_demuxer_get_track_info(MMHandleType pHandle, media_format_h *format, int track)
 {
 	MEDIADEMUXER_FENTER();
 	MD_E("%s:exit: Not implemented\n", __func__);

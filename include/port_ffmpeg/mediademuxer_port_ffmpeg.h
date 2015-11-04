@@ -28,9 +28,9 @@
 extern "C" {
 #endif
 
-/*Place holder*/
+/* Place holder */
 
 #ifdef __cplusplus
 }
 #endif
-#endif /* __TIZEN_MEDIADEMUXER_PORT_FFMPEG_H__ */
+#endif	/* __TIZEN_MEDIADEMUXER_PORT_FFMPEG_H__ */

@@ -87,4 +87,4 @@ int md_ini_load(md_ini_t *ini);
 #ifdef __cplusplus
 }
 #endif
-#endif /*__TIZEN_MEDIADEMUXER_INI_H__*/
+#endif	/* __TIZEN_MEDIADEMUXER_INI_H__ */
