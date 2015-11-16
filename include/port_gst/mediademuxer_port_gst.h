@@ -65,6 +65,7 @@ typedef struct track {
 	GstElement *appsink;
 	GstElement *fakesink;
 	GstElement *queue;
+	media_format_h format;
 	struct track *next;
 } track;
 

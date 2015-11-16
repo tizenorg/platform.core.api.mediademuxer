@@ -48,7 +48,6 @@ enum {
 |    GLOBAL VARIABLE DEFINITIONS:                                       |
 -----------------------------------------------------------------------*/
 mediademuxer_h demuxer = NULL;
-media_format_h *g_media_format = NULL;
 media_format_mimetype_e v_mime;
 media_format_mimetype_e a_mime;
 int g_menu_state = CURRENT_STATUS_MAINMENU;
@@ -250,44 +249,35 @@ int test_mediademuxer_get_track_info()
 	int track = 0;
 
 	g_print("test_mediademuxer_get_track_info\n");
-	g_media_format =
-	    (media_format_h *) g_malloc(sizeof(media_format_h) * num_tracks);
-	g_print("allocated %p memory for g_media_format\n", g_media_format);
-	if (g_media_format) {
-		for (; track < num_tracks; track++) {
+	for (; track < num_tracks; track++) {
+		media_format_h g_media_format;
+		if (ret == 0) {
+			g_print("g_media_format[%d] is created successfully! \n", track);
+			ret = mediademuxer_get_track_info(demuxer, track, &g_media_format);
 			if (ret == 0) {
-				g_print("g_media_format[%d] is created successfully! \n", track);
-				ret = mediademuxer_get_track_info(demuxer, track, &g_media_format[track]);
-				if (ret == 0) {
-					if (media_format_get_video_info(g_media_format[track], &v_mime,
-								&w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
-						g_print("media_format_get_video_info is sucess!\n");
-						g_print("\t\t[media_format_get_video]mime:%x, width :%d, height :%d\n",
+				if (media_format_get_video_info(g_media_format, &v_mime,
+						&w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+					g_print("media_format_get_video_info is sucess!\n");
+					g_print("\t\t[media_format_get_video]mime:%x, width :%d, height :%d\n",
 								v_mime, w, h);
 						vid_track = track;
-					} else if (media_format_get_audio_info(g_media_format[track], &a_mime,
-								&channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
-						g_print("media_format_get_audio_info is sucess!\n");
-						g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
-								a_mime, channel, samplerate, bit);
-						media_format_get_audio_aac_type(g_media_format[track], &is_adts);
-						aud_track = track;
-					} else {
-						g_print("Not Supported YET\n");
-					}
+				} else if (media_format_get_audio_info(g_media_format, &a_mime,
+							&channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+					g_print("media_format_get_audio_info is sucess!\n");
+					g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
+							a_mime, channel, samplerate, bit);
+					if (a_mime == MEDIA_FORMAT_AAC_LC)
+						media_format_get_audio_aac_type(g_media_format, &is_adts);
+					aud_track = track;
 				} else {
+					g_print("Not Supported YET\n");
+				}
+			} else {
 					g_print("Error while getting mediademuxer_get_track_info\n");
 				}
-				media_format_unref(g_media_format[track]);
-				g_media_format[track] = NULL;
 			} else {
 				g_print("Error while creating media_format_create\n");
 			}
-		}
-		g_free(g_media_format);
-		g_media_format = NULL;
-	} else {
-		g_print("Error while allocating memory\n");
 	}
 
 #if DEMUXER_OUTPUT_DUMP

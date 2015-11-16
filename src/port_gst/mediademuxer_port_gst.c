@@ -353,6 +353,8 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 	} else if (strstr(type, "audio/x-amr-nb-sh")
 		   || strstr(type, "audio/x-amr-wb-sh")) {
 		gst_handle->demux = gst_element_factory_make("amrparse", NULL);
+	} else if (strstr(type, "audio/x-wav")) {
+		gst_handle->demux = gst_element_factory_make("wavparse", NULL);
 	}
 	g_free(type);
 	if (!gst_handle->demux) {
@@ -504,6 +506,7 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 			}
 		} else if ((strstr(type, "adts"))
 			   || (strstr(type, "audio/mpeg"))
+			   || (strstr(type, "audio/x-wav"))
 			   || (strstr(type, "application/x-id3"))
 			   || (strstr(type, "audio/x-amr-nb-sh"))
 			   || (strstr(type, "audio/x-amr-wb-sh"))) {
@@ -906,6 +909,24 @@ int _set_mime_audio(media_format_h format, track *head)
 			bit = 16;	/* default */
 		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
+	} else if (gst_structure_has_name(struc, "audio/x-wav")) {
+		gst_structure_get_int(struc, "channels", &channels);
+		gst_structure_get_int(struc, "rate", &rate);
+		gst_structure_get_int(struc, "bit", &bit);
+		if (media_format_set_audio_mime(format, MEDIA_FORMAT_PCM))
+			goto ERROR;
+		if (channels == 0)
+			channels = 2;	/* default */
+		if (media_format_set_audio_channel(format, channels))
+			goto ERROR;
+		if (rate == 0)
+			rate = 44100;	/* default */
+		if (media_format_set_audio_samplerate(format, rate))
+			goto ERROR;
+		if (bit == 0)
+			bit = 16;	/* default */
+		if (media_format_set_audio_bit(format, bit))
+			goto ERROR;
 	} else {
 		MD_I("Audio mime not supported so far\n");
 		goto ERROR;
@@ -938,27 +959,31 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 		goto ERROR;
 	}
 
-	ret = media_format_create(format);
-	if (ret != MEDIA_FORMAT_ERROR_NONE) {
-		MD_E("Mediaformat creation failed. returned %d\n", ret);
-		ret = MD_INTERNAL_ERROR;
-		goto ERROR;
-	}
 	while (count != index) {
 		temp = temp->next;
 		count++;
 	}
 
+	ret = media_format_create(&(temp->format));
+	if (ret != MEDIA_FORMAT_ERROR_NONE) {
+		MD_E("Mediaformat creation failed. returned %d\n", ret);
+		ret = MD_INTERNAL_ERROR;
+		goto ERROR;
+	}
+
 	MD_I("CAPS for selected track [%d] is [%s]\n", index, temp->caps_string);
-	MD_I("format ptr[%p]\n", *format);
+	MD_I("format ptr[%p]\n", temp->format);
 	if (temp->name[0] == 'a') {
 		MD_I("Setting for Audio \n");
-		_set_mime_audio(*format, temp);
+		_set_mime_audio(temp->format, temp);
 	} else if (temp->name[0] == 'v') {
 		MD_I("Setting for Video \n");
-		_set_mime_video(*format, temp);
+		_set_mime_video(temp->format, temp);
 	} else
-		MD_I("Not supported so far (except audio and video)\n");
+		MD_W("Not supported so far (except audio and video)\n");
+
+	*format = temp->format;
+
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
@@ -1044,7 +1069,6 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	mdgst_handle_t *demuxer = (mdgst_handle_t *) pHandle;
 
 	media_packet_h mediabuf = NULL;
-	media_format_h mediafmt = NULL;
 	int indx = 0;
 	char *codec_data = NULL;
 	char *temp_codec_data = NULL;
@@ -1069,56 +1093,13 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		}
 		indx++;
 	}
-	if (atrack->name[0] == 'a') {
-		if (media_format_create(&mediafmt)) {
-			MD_E("media_format_create failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
 
-		if (media_format_set_audio_mime(mediafmt, MEDIA_FORMAT_AAC)) {
-			MD_E("media_format_set_audio_mime failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
-
-		if (media_packet_create_alloc(mediafmt, NULL, NULL, &mediabuf)) {
+	if (media_packet_create_alloc(atrack->format, NULL, NULL, &mediabuf)) {
 			MD_E("media_packet_create_alloc failed\n");
 			ret = MD_ERROR;
 			goto ERROR;
 		}
-	} else if (atrack->name[0] == 'v') {
-		 if (media_format_create(&mediafmt)) {
-			MD_E("media_format_create failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
 
-		if (media_format_set_video_mime(mediafmt, MEDIA_FORMAT_H264_SP)) {
-			MD_E("media_format_set_ivideo_mime failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
-		if (media_format_set_video_width(mediafmt, 760)) {
-			MD_E("media_format_set_video_width failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
-		if (media_format_set_video_height(mediafmt, 480)) {
-			MD_E("media_format_set_video_height failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
-
-		if (media_packet_create_alloc(mediafmt, NULL, NULL, &mediabuf)) {
-			MD_E("media_packet_create_alloc failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
-	} else {
-		MD_E("Invalid track format\n");
-		goto ERROR;
-	}
 	if (indx != track_indx) {
 		MD_E("Invalid track Index\n");
 		ret = MD_ERROR_INVALID_ARGUMENT;
