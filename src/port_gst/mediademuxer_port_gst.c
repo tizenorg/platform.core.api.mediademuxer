@@ -355,6 +355,8 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 		gst_handle->demux = gst_element_factory_make("amrparse", NULL);
 	} else if (strstr(type, "audio/x-wav")) {
 		gst_handle->demux = gst_element_factory_make("wavparse", NULL);
+	} else if (strstr(type, "audio/x-flac")) {
+		gst_handle->demux = gst_element_factory_make("flacparse", NULL);
 	}
 	g_free(type);
 	if (!gst_handle->demux) {
@@ -507,6 +509,7 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 		} else if ((strstr(type, "adts"))
 			   || (strstr(type, "audio/mpeg"))
 			   || (strstr(type, "audio/x-wav"))
+			   || (strstr(type, "audio/x-flac"))
 			   || (strstr(type, "application/x-id3"))
 			   || (strstr(type, "audio/x-amr-nb-sh"))
 			   || (strstr(type, "audio/x-amr-wb-sh"))) {
@@ -914,6 +917,24 @@ int _set_mime_audio(media_format_h format, track *head)
 		gst_structure_get_int(struc, "rate", &rate);
 		gst_structure_get_int(struc, "bit", &bit);
 		if (media_format_set_audio_mime(format, MEDIA_FORMAT_PCM))
+			goto ERROR;
+		if (channels == 0)
+			channels = 2;	/* default */
+		if (media_format_set_audio_channel(format, channels))
+			goto ERROR;
+		if (rate == 0)
+			rate = 44100;	/* default */
+		if (media_format_set_audio_samplerate(format, rate))
+			goto ERROR;
+		if (bit == 0)
+			bit = 16;	/* default */
+		if (media_format_set_audio_bit(format, bit))
+			goto ERROR;
+	} else if (gst_structure_has_name(struc, "audio/x-flac")) {
+		gst_structure_get_int(struc, "channels", &channels);
+		gst_structure_get_int(struc, "rate", &rate);
+		gst_structure_get_int(struc, "bit", &bit);
+		if (media_format_set_audio_mime(format, MEDIA_FORMAT_FLAC))
 			goto ERROR;
 		if (channels == 0)
 			channels = 2;	/* default */
