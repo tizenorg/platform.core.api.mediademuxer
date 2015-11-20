@@ -79,7 +79,7 @@ extern "C" {
 #define MEDIADEMUXER_CHECK_NULL(x_var) \
 	if (!x_var) { \
 		MD_E("[%s] is NULL\n", #x_var); \
-		goto ERROR; \
+		return MD_ERROR_INVALID_ARGUMENT; \
 	}
 
 #define MEDIADEMUXER_CHECK_SET_AND_PRINT(x_var, x_cond, ret, ret_val, err_text) \

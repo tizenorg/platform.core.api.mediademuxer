@@ -251,33 +251,30 @@ int test_mediademuxer_get_track_info()
 	g_print("test_mediademuxer_get_track_info\n");
 	for (; track < num_tracks; track++) {
 		media_format_h g_media_format;
+		ret = mediademuxer_get_track_info(demuxer, track, &g_media_format);
 		if (ret == 0) {
-			g_print("g_media_format[%d] is created successfully! \n", track);
-			ret = mediademuxer_get_track_info(demuxer, track, &g_media_format);
-			if (ret == 0) {
-				if (media_format_get_video_info(g_media_format, &v_mime,
-						&w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
-					g_print("media_format_get_video_info is sucess!\n");
-					g_print("\t\t[media_format_get_video]mime:%x, width :%d, height :%d\n",
-								v_mime, w, h);
-						vid_track = track;
-				} else if (media_format_get_audio_info(g_media_format, &a_mime,
+			if (media_format_get_video_info(g_media_format, &v_mime,
+					&w, &h, NULL, NULL) == MEDIA_FORMAT_ERROR_NONE) {
+				g_print("media_format_get_video_info is sucess!\n");
+				g_print("\t\t[media_format_get_video]mime:%x, width :%d, height :%d\n",
+							v_mime, w, h);
+				vid_track = track;
+			} else if (media_format_get_audio_info(g_media_format, &a_mime,
 							&channel, &samplerate, &bit, NULL) == MEDIA_FORMAT_ERROR_NONE) {
-					g_print("media_format_get_audio_info is sucess!\n");
-					g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
+				g_print("media_format_get_audio_info is sucess!\n");
+				g_print("\t\t[media_format_get_audio]mime:%x, channel :%d, samplerate :%d, bit :%d\n",
 							a_mime, channel, samplerate, bit);
-					if (a_mime == MEDIA_FORMAT_AAC_LC)
-						media_format_get_audio_aac_type(g_media_format, &is_adts);
-					aud_track = track;
-				} else {
+				if (a_mime == MEDIA_FORMAT_AAC_LC)
+					media_format_get_audio_aac_type(g_media_format, &is_adts);
+				aud_track = track;
+			} else {
 					g_print("Not Supported YET\n");
-				}
-			} else {
-					g_print("Error while getting mediademuxer_get_track_info\n");
-				}
-			} else {
-				g_print("Error while creating media_format_create\n");
 			}
+			media_format_unref(g_media_format);
+			g_media_format = NULL;
+		} else {
+			g_print("Error while getting mediademuxer_get_track_info\n");
+		}
 	}
 
 #if DEMUXER_OUTPUT_DUMP
