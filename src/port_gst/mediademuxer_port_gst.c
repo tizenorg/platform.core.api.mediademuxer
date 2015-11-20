@@ -75,10 +75,6 @@ int gst_port_register(media_port_demuxer_ops *pOps)
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	ret = MD_ERROR_INVALID_ARGUMENT;
-	MEDIADEMUXER_FLEAVE();
-	return ret;
 }
 
 static int gst_demuxer_init(MMHandleType *pHandle)
@@ -628,6 +624,10 @@ static int gst_demuxer_prepare(MMHandleType pHandle, char *uri)
 
 	MD_I("gst_demuxer_prepare Creating pipeline %p", new_mediademuxer);
 	ret = _gst_create_pipeline(new_mediademuxer, uri);
+	if (ret != MD_ERROR_NONE) {
+		MD_E("_gst_create_pipeline() failed. returned %d\n",ret);
+		goto ERROR;
+	}
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
@@ -648,9 +648,6 @@ static int gst_demuxer_get_data_count(MMHandleType pHandle, int *count)
 			(new_mediademuxer->info).num_other_track;
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	MEDIADEMUXER_FLEAVE();
-	return MD_ERROR;
 }
 
 int _gst_set_appsink(track *temp, int index, int loop)
@@ -672,13 +669,14 @@ int _gst_set_appsink(track *temp, int index, int loop)
 static int gst_demuxer_set_track(MMHandleType pHandle, int track)
 {
 	MEDIADEMUXER_FENTER();
-	int ret = MD_INVALID_ARG;
+	int ret = MD_ERROR_NONE;
 	MEDIADEMUXER_CHECK_NULL(pHandle);
 	mdgst_handle_t *new_mediademuxer = (mdgst_handle_t *) pHandle;
 
 	MD_I("total_tracks (%d) :: selected  track (%d)", new_mediademuxer->total_tracks, track);
 	if (track >= new_mediademuxer->total_tracks || track < 0) {
 		MD_E("total_tracks is less then selected track, So not support this track");
+		ret = MD_ERROR_INVALID_ARGUMENT;
 		goto ERROR;
 	}
 	new_mediademuxer->selected_tracks[track] = true;
@@ -720,7 +718,8 @@ static int gst_demuxer_start(MMHandleType pHandle)
 		if (gst_element_set_state(temp->appsink, GST_STATE_PLAYING) ==
 			GST_STATE_CHANGE_FAILURE) {
 			MD_E("Failed to set into PLAYING state");
-			ret = MD_ERROR_UNKNOWN;
+			ret = MD_INTERNAL_ERROR;
+			goto ERROR;
 		}
 		MD_I("set the state to playing\n");
 		indx++;
@@ -977,6 +976,7 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 			(new_mediademuxer->info).num_other_track;
 	if (index >= loop || index < 0) {
 		MD_E("total tracks(loop) is less then selected track(index), So not support this track");
+		ret = MD_ERROR;
 		goto ERROR;
 	}
 
@@ -1003,13 +1003,25 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 	} else
 		MD_W("Not supported so far (except audio and video)\n");
 
-	*format = temp->format;
+	ret = media_format_ref(temp->format);	/* increment the ref to retain the original content */
+	if (ret != MEDIA_FORMAT_ERROR_NONE) {
+		MD_E("Mediaformat reference count increment failed. returned %d\n",ret);
+		ret = MD_INTERNAL_ERROR;
+		goto ERROR;
+	}
+	ret = media_format_make_writable(temp->format, format);	/* copy the content */
+	if(ret != MEDIA_FORMAT_ERROR_NONE) {
+		MD_E("Mediaformat create copy failed. returned %d\n",ret);
+		media_format_unref(temp->format);
+		ret = MD_INTERNAL_ERROR;
+		goto ERROR;
+	}
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
 	MEDIADEMUXER_FLEAVE();
-	return MD_ERROR;
+	return ret;
 }
 
 static int _gst_copy_buf_to_media_packet(media_packet_h out_pkt,
@@ -1206,7 +1218,8 @@ static int gst_demuxer_seek(MMHandleType pHandle, gint64 pos1)
 			if (!gst_element_seek(temp->appsink, rate, GST_FORMAT_TIME,
 			     GST_SEEK_FLAG_FLUSH, GST_SEEK_TYPE_SET, pos1,
 			     GST_SEEK_TYPE_NONE, GST_CLOCK_TIME_NONE)) {
-				g_print("Seek failed!\n");
+				MD_E("Seek failed!\n");
+				goto ERROR;
 			} else {
 				MD_I("Seek success\n");
 			}
@@ -1245,19 +1258,20 @@ int _gst_unset_appsink(track *temp, int index, int loop)
 static int gst_demuxer_unset_track(MMHandleType pHandle, int track)
 {
 	MEDIADEMUXER_FENTER();
-	int ret = MD_INVALID_ARG;
+	int ret = MD_ERROR_NONE;
 	MEDIADEMUXER_CHECK_NULL(pHandle);
 	mdgst_handle_t *new_mediademuxer = (mdgst_handle_t *) pHandle;
 
 	if (track >= new_mediademuxer->total_tracks || track < 0) {
 		MD_E("total tracks is less then unselected track, So not support this track");
+		ret = MD_ERROR_INVALID_ARGUMENT;
 		goto ERROR;
 	}
 	new_mediademuxer->selected_tracks[track] = false;
 	_gst_unset_appsink((((mdgst_handle_t *) pHandle)->info).head, track,
 					new_mediademuxer->total_tracks);
 	MEDIADEMUXER_FLEAVE();
-	return MD_ERROR_NONE;
+	return ret;
 ERROR:
 	MEDIADEMUXER_FLEAVE();
 	return ret;
@@ -1274,7 +1288,8 @@ static int gst_demuxer_stop(MMHandleType pHandle)
 	if (gst_element_set_state(gst_handle->pipeline, GST_STATE_PAUSED) ==
 	    GST_STATE_CHANGE_FAILURE) {
 		MD_E("Failed to set into PAUSE state");
-		ret = MD_ERROR_UNKNOWN;
+		ret = MD_INTERNAL_ERROR;
+		goto ERROR;
 	}
 	MEDIADEMUXER_FLEAVE();
 	return ret;
@@ -1342,9 +1357,6 @@ static int gst_demuxer_destroy(MMHandleType pHandle)
 	MD_I("gst_demuxer_destroy deallocating new_mediademuxer:%p\n",
 	     new_mediademuxer);
 	g_free(new_mediademuxer);
-	MEDIADEMUXER_FLEAVE();
-	return ret;
-ERROR:
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 }

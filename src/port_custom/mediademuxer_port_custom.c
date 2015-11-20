@@ -55,9 +55,6 @@ int custom_port_register(media_port_demuxer_ops *pOps)
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	ret = MD_ERROR_INVALID_ARGUMENT;
-	return ret;
 }
 
 static int custom_demuxer_init(MMHandleType *pHandle)

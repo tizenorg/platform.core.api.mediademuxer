@@ -55,9 +55,6 @@ int ffmpeg_port_register(media_port_demuxer_ops *pOps)
 
 	MEDIADEMUXER_FLEAVE();
 	return ret;
-ERROR:
-	ret = MD_ERROR_INVALID_ARGUMENT;
-	return ret;
 }
 
 static int ffmpeg_demuxer_init(MMHandleType *pHandle)
