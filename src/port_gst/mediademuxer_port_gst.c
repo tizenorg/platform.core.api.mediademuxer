@@ -330,16 +330,19 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) data;
 	GstPad *pad = NULL;
 	GstPad *aud_pad = NULL;
+	GstPad *queue_srcpad = NULL;
+	GstPad *queue_sinkpad = NULL;
 	GstPad *aud_srcpad = NULL;
 	GstPad *fake_pad = NULL;
 	GstElement *id3tag = NULL;
+	GstElement *adif_queue = NULL;
 	gchar *name;
 	gchar *type;
 	track_info *head_track = &(gst_handle->info);
 	track *trck;
 	gst_handle->is_valid_container = true;
 	type = gst_caps_to_string(caps);
-	if (strstr(type, "adts")) {
+	if (strstr(type, "adts") || strstr(type, "adif")) {
 		gst_handle->demux = gst_element_factory_make("aacparse", NULL);
 	} else if (strstr(type, "audio/mpeg")) {
 		gst_handle->demux = gst_element_factory_make("mpegaudioparse", NULL);
@@ -354,7 +357,7 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 	} else if (strstr(type, "audio/x-flac")) {
 		gst_handle->demux = gst_element_factory_make("flacparse", NULL);
 	}
-	g_free(type);
+
 	if (!gst_handle->demux) {
 		gst_handle->is_valid_container = false;
 		MD_E("factory not able to create audio parse element\n");
@@ -381,7 +384,32 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 			goto ERROR;
 		}
 		gst_pad_unlink(pad, fake_pad);
-		MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
+		if (strstr(type, "adif")) {
+			adif_queue = gst_element_factory_make("queue", NULL);
+			if (!adif_queue) {
+				MD_E("factory not able to make queue in case of adif aac\n");
+				goto ERROR;
+			}
+			/* Add this queue to the pipeline */
+			gst_bin_add_many(GST_BIN(gst_handle->pipeline), adif_queue, NULL);
+			queue_srcpad = gst_element_get_static_pad(adif_queue, "src");
+			if (!queue_srcpad) {
+				MD_E("fail to get queue src pad for adif aac.\n");
+				goto ERROR;
+			}
+			queue_sinkpad = gst_element_get_static_pad(adif_queue, "sink");
+			if (!queue_sinkpad) {
+				MD_E("fail to get queue sink pad for adif aac.\n");
+				goto ERROR;
+			}
+			/* link typefind with queue */
+			MEDIADEMUXER_LINK_PAD(pad, queue_sinkpad, ERROR);
+			/* link queue with aacparse */
+			MEDIADEMUXER_LINK_PAD(queue_srcpad, aud_pad, ERROR);
+		} else {
+			MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
+		}
+
 		if (!id3tag) {
 			MEDIADEMUXER_SET_STATE(gst_handle->demux,
 					       GST_STATE_PAUSED, ERROR);
@@ -391,14 +419,24 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 					       GST_STATE_PAUSED, ERROR);
 			gst_element_link(id3tag, gst_handle->demux);
 		}
+
+		if(adif_queue) {
+			MEDIADEMUXER_SET_STATE(adif_queue, GST_STATE_PAUSED, ERROR);
+		}
+
 		if (pad)
 			gst_object_unref(pad);
 		if (aud_pad)
 			gst_object_unref(aud_pad);
 		if (fake_pad)
 			gst_object_unref(fake_pad);
+		if (queue_sinkpad)
+			gst_object_unref(queue_sinkpad);
+		if (queue_srcpad)
+			gst_object_unref(queue_srcpad);
 	}
 
+	g_free(type);
 	/* calling "on_pad_added" function to set the caps */
 	aud_srcpad = gst_element_get_static_pad(gst_handle->demux, "src");
 	if (!aud_srcpad) {
@@ -446,6 +484,12 @@ ERROR:
 		gst_object_unref(fake_pad);
 	if (aud_srcpad)
 		gst_object_unref(aud_srcpad);
+	if (queue_sinkpad)
+		gst_object_unref(queue_sinkpad);
+	if (queue_srcpad)
+		gst_object_unref(queue_srcpad);
+	if (type)
+		g_free(type);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR;
 }
