@@ -294,6 +294,7 @@ static void __gst_on_pad_added(GstElement *element, GstPad *pad, gpointer data)
 {
 	MEDIADEMUXER_FENTER();
 	MD_I("Dynamic pad created, linking demuxer/decoder\n");
+	track *tmp = NULL;
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) data;
 	track_info *head_track = &(gst_handle->info);
 	gchar *name = gst_pad_get_name(pad);
@@ -308,17 +309,20 @@ static void __gst_on_pad_added(GstElement *element, GstPad *pad, gpointer data)
 		__gst_free_stuct(&(head_track->head));
 		return;
 	}
-	if (name[0] == 'v') {
+	tmp = head_track->head;
+	while (tmp->next)
+		tmp = tmp->next;
+	if (tmp->caps_string[0] == 'v') {
 		MD_I("found Video Pad\n");
 		(head_track->num_video_track)++;
-	} else if (name[0] == 'a') {
+	} else if (tmp->caps_string[0] == 'a') {
 		MD_I("found Audio Pad\n");
 		(head_track->num_audio_track)++;
-	} else if (name[0] == 's') {
-		MD_I("found subtitle Pad\n");
+	} else if (tmp->caps_string[0] == 's') {
+		MD_I("found subtitle(or Text) Pad\n");
 		(head_track->num_subtitle_track)++;
 	} else {
-		MD_I("found Pad %s\n", name);
+		MD_W("found Pad %s\n", name);
 		(head_track->num_other_track)++;
 	}
 	MEDIADEMUXER_FLEAVE();
@@ -499,15 +503,20 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 	MEDIADEMUXER_FENTER();
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) data;
 	GstPad *pad = NULL;
-	GstPad *qt_pad = NULL;
+	GstPad *demuxer_pad = NULL;
 	GstPad *fake_pad = NULL;
 	gchar *type;
 	type = gst_caps_to_string(caps);
 	if (type) {
 		MD_I("Media type %s found, probability %d%%\n", type, probability);
-		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a")) || strstr(type, "x-3gp")) {
+		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a")) || strstr(type, "x-3gp")
+				|| strstr(type, "ogg")) {
 			gst_handle->is_valid_container = true;
-			gst_handle->demux = gst_element_factory_make("qtdemux", NULL);
+			if (strstr(type, "ogg"))
+				gst_handle->demux = gst_element_factory_make("oggdemux", NULL);
+			else
+				gst_handle->demux = gst_element_factory_make("qtdemux", NULL);
+
 			if (!gst_handle->demux) {
 				gst_handle->is_valid_container = false;
 				MD_E("factory not able to create qtdemux\n");
@@ -524,8 +533,8 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 					MD_E("fail to get typefind src pad.\n");
 					goto ERROR;
 				}
-				qt_pad = gst_element_get_static_pad(gst_handle->demux, "sink");
-				if (!qt_pad) {
+				demuxer_pad = gst_element_get_static_pad(gst_handle->demux, "sink");
+				if (!demuxer_pad) {
 					MD_E("fail to get qtdemuc sink pad.\n");
 					goto ERROR;
 				}
@@ -535,13 +544,13 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 					goto ERROR;
 				}
 				gst_pad_unlink(pad, fake_pad);
-				MEDIADEMUXER_LINK_PAD(pad, qt_pad, ERROR);
+				MEDIADEMUXER_LINK_PAD(pad, demuxer_pad, ERROR);
 				MEDIADEMUXER_SET_STATE(gst_handle->demux,
 									GST_STATE_PAUSED, ERROR);
 				if (pad)
 					gst_object_unref(pad);
-				if (qt_pad)
-					gst_object_unref(qt_pad);
+				if (demuxer_pad)
+					gst_object_unref(demuxer_pad);
 				if (fake_pad)
 					gst_object_unref(fake_pad);
 			}
@@ -570,8 +579,8 @@ ERROR:
 		g_free(type);
 	if (pad)
 		gst_object_unref(pad);
-	if (qt_pad)
-		gst_object_unref(qt_pad);
+	if (demuxer_pad)
+		gst_object_unref(demuxer_pad);
 	if (fake_pad)
 		gst_object_unref(fake_pad);
 	MEDIADEMUXER_FLEAVE();
@@ -990,6 +999,24 @@ int _set_mime_audio(media_format_h format, track *head)
 			bit = 16;	/* default */
 		if (media_format_set_audio_bit(format, bit))
 			goto ERROR;
+	} else if (gst_structure_has_name(struc, "audio/x-vorbis")) {
+		gst_structure_get_int(struc, "channels", &channels);
+		gst_structure_get_int(struc, "rate", &rate);
+		gst_structure_get_int(struc, "bit", &bit);
+		if (media_format_set_audio_mime(format, MEDIA_FORMAT_VORBIS))
+			goto ERROR;
+		if (channels == 0)
+			channels = 2;	/* default */
+		if (media_format_set_audio_channel(format, channels))
+			goto ERROR;
+		if (rate == 0)
+			rate = 44100;	/* default */
+		if (media_format_set_audio_samplerate(format, rate))
+			goto ERROR;
+		if (bit == 0)
+			bit = 16;	/* default */
+		if (media_format_set_audio_bit(format, bit))
+			goto ERROR;
 	} else {
 		MD_I("Audio mime not supported so far\n");
 		goto ERROR;
@@ -1037,10 +1064,10 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 
 	MD_I("CAPS for selected track [%d] is [%s]\n", index, temp->caps_string);
 	MD_I("format ptr[%p]\n", temp->format);
-	if (temp->name[0] == 'a') {
+	if (temp->caps_string[0] == 'a') {
 		MD_I("Setting for Audio \n");
 		_set_mime_audio(temp->format, temp);
-	} else if (temp->name[0] == 'v') {
+	} else if (temp->caps_string[0] == 'v') {
 		MD_I("Setting for Video \n");
 		_set_mime_video(temp->format, temp);
 	} else

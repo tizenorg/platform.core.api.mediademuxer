@@ -420,6 +420,10 @@ void *_fetch_audio_data(void *ptr)
 			flag = 10;
 			g_print("mediacodec_init_audio() for MEDIACODEC_FLAC\n");
 			mediacodec_init_audio(MEDIACODEC_FLAC, flag, samplerate, channel, bit);
+		} else if (a_mime == MEDIA_FORMAT_VORBIS) {
+			flag = 10;
+			g_print("mediacodec_init_audio() for MEDIACODEC_VORBIS\n");
+			mediacodec_init_audio(MEDIACODEC_VORBIS, flag, samplerate, channel, bit);
 		} else {
 			g_print("Not Supported YET- Need to add mime for validating with audio codec\n");
 			return (void *)status;
