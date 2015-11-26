@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define MAX_ERR_LEN 256
+
 /* function type */
 extern int gst_port_register(media_port_demuxer_ops *pOps);
 extern int ffmpeg_port_register(media_port_demuxer_ops *pOps);
@@ -108,11 +110,15 @@ int __md_util_exist_file_path(const char *file_path)
 
 	fd = open(file_path, O_RDONLY);
 	if (fd < 0) {
-		MD_E("failed to open file by %s (%d)\n", strerror(errno), errno);
-		if (EACCES == errno) {
-			MEDIADEMUXER_FLEAVE();
-			return MD_ERROR_FILE_NOT_FOUND;
-		}
+		char buf[MAX_ERR_LEN];
+		int ret_err = 0;
+		ret_err = strerror_r(errno, buf, MAX_ERR_LEN);
+		if (0 == ret_err)
+			MD_E("failed to open file by %s (%d)\n", buf, errno);
+		else
+			MD_E("File not found, strerror_r() failed with errno (%d)\n", errno);
+		MEDIADEMUXER_FLEAVE();
+		return MD_ERROR_FILE_NOT_FOUND;
 	}
 
 	if (fstat(fd, &stat_results) < 0) {
@@ -227,10 +233,6 @@ mediademuxer_src_type __md_util_media_type(char **uri)
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
-	if (new_uristr)
-		free(new_uristr);
-	if (old_uristr)
-		free(old_uristr);
 	MEDIADEMUXER_FLEAVE();
 	return MEDIADEMUXER_SRC_INVALID;
 }
@@ -251,8 +253,8 @@ int _md_util_parse(MMHandleType demuxer, const char *type)
 	strncpy(media_type_string, type, lenght_string + 1);
 	/*Set media_type depending upon the header of string else consider using file protocol */
 	if (new_demuxer->uri_src) {
-		free(new_demuxer->uri_src);
 		MD_L("new_demuxer->uri_src deallocating %p\n", new_demuxer->uri_src);
+		free(new_demuxer->uri_src);
 	}
 	new_demuxer->uri_src_media_type = __md_util_media_type(&media_type_string);
 	if (new_demuxer->uri_src_media_type != MEDIADEMUXER_SRC_INVALID) {

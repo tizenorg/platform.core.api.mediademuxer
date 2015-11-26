@@ -48,9 +48,9 @@ static void _md_ini_check_ini_status(void);
 		if (str &&  \
 		     (strlen(str) > 0) && \
 		     (strlen(str) < MEDIADEMUXER_INI_MAX_STRLEN)) { \
-			strcpy(x_item, str); \
+			strncpy(x_item, str, MEDIADEMUXER_INI_MAX_STRLEN - 1); \
 		} else { \
-			strcpy(x_item, x_default); \
+			strncpy(x_item, x_default, MEDIADEMUXER_INI_MAX_STRLEN - 1); \
 		} \
 	} while (0)
 

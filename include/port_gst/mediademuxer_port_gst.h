@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-#define POLLING_INTERVAL 1000
+#define POLLING_INTERVAL 10000
 #define MAX_APP_BUFFER 100
 
 #define MEDIADEMUXER_SET_STATE(x_element, x_state, error) \

@@ -462,7 +462,7 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 		gst_object_unref(aud_srcpad);
 
 	trck = head_track->head;
-	while (aud_srcpad != trck->pad && trck != NULL)
+	while (trck != NULL && aud_srcpad != trck->pad)
 		trck = trck->next;
 	if (trck != NULL) {
 		trck->caps = caps;
@@ -491,8 +491,7 @@ ERROR:
 		gst_object_unref(queue_sinkpad);
 	if (queue_srcpad)
 		gst_object_unref(queue_srcpad);
-	if (type)
-		g_free(type);
+	g_free(type);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR;
 }
@@ -1265,7 +1264,7 @@ static int gst_demuxer_seek(MMHandleType pHandle, gint64 pos1)
 	MEDIADEMUXER_CHECK_NULL(pHandle);
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) pHandle;
 
-	gint64 pos, len;
+	gint64 pos = 0, len = 0;
 	gdouble rate = 1;
 	if (gst_element_query_position(gst_handle->pipeline, GST_FORMAT_TIME, &pos) &&
 	     gst_element_query_duration(gst_handle->pipeline, GST_FORMAT_TIME, &len)) {
