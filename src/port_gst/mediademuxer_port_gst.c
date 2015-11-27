@@ -267,6 +267,7 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 
 		outcaps = gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING, "byte-stream", NULL);
 		gst_element_link_filtered(parse_element, temp->appsink, outcaps);
+		gst_caps_unref(outcaps);
 	} else {
 		MEDIADEMUXER_LINK_PAD(pad, apppad, ERROR);
 	}
@@ -509,10 +510,12 @@ static void __gst_cb_typefind(GstElement *tf, guint probability,
 	if (type) {
 		MD_I("Media type %s found, probability %d%%\n", type, probability);
 		if (strstr(type, "quicktime") || (strstr(type, "audio/x-m4a")) || strstr(type, "x-3gp")
-				|| strstr(type, "ogg")) {
+				|| strstr(type, "ogg") || strstr(type, "flv")) {
 			gst_handle->is_valid_container = true;
 			if (strstr(type, "ogg"))
 				gst_handle->demux = gst_element_factory_make("oggdemux", NULL);
+			else if (strstr(type, "flv"))
+				gst_handle->demux = gst_element_factory_make("flvdemux", NULL);
 			else
 				gst_handle->demux = gst_element_factory_make("qtdemux", NULL);
 
@@ -591,7 +594,8 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;
 	GstBus *bus = NULL;
-
+	char *path = NULL;
+	int remote_streaming = 0;
 	/* Initialize GStreamer */
 	/* Note: Replace the arguments of gst_init to pass the command line args to GStreamer. */
 	gst_init(NULL, NULL);
@@ -605,7 +609,14 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 	}
 
 	/* Create the elements */
-	gst_handle->filesrc = gst_element_factory_make("filesrc", NULL);
+	if ((path = strstr(uri, "http://"))) {
+		gst_handle->filesrc  = gst_element_factory_make("souphttpsrc", NULL);
+		remote_streaming = 1;
+		MD_I("Source is http stream. \n");
+	} else {
+		gst_handle->filesrc = gst_element_factory_make("filesrc", NULL);
+		MD_I("Source is file stream \n");
+	}
 	if (!gst_handle->filesrc) {
 		MD_E("filesrc creation failed");
 		ret = MD_ERROR;
@@ -613,7 +624,10 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 	}
 
 	/* Modify the source's properties */
-	g_object_set(G_OBJECT(gst_handle->filesrc), "location", uri + 7, NULL);
+	if (remote_streaming == 1)
+		g_object_set(G_OBJECT(gst_handle->filesrc), "location", uri, NULL);
+	else
+		g_object_set(G_OBJECT(gst_handle->filesrc), "location", uri + 7, NULL);
 	gst_handle->typefind = gst_element_factory_make("typefind", NULL);
 	if (!gst_handle->typefind) {
 		MD_E("typefind creation failed");
@@ -1209,16 +1223,17 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	}
 	GstElement *sink = atrack->appsink;
 	GstSample *sample = NULL;
-	if (gst_app_sink_is_eos((GstAppSink *) sink)) {
-		MD_W("End of stream (EOS) reached\n");
-		ret = MD_EOS;
-		goto ERROR;
-	}
 
 	sample = gst_app_sink_pull_sample((GstAppSink *) sink);
 	if (sample == NULL) {
-		MD_E("gst_demuxer_read_sample failed\n");
-		ret = MD_ERROR_UNKNOWN;
+		if (gst_app_sink_is_eos((GstAppSink *) sink)) {
+			MD_W("End of stream (EOS) reached\n");
+			ret = MD_EOS;
+			goto ERROR;
+		} else {
+			MD_E("gst_demuxer_read_sample failed\n");
+			ret = MD_ERROR_UNKNOWN;
+		}
 	}
 
 	GstBuffer *buffer = gst_sample_get_buffer(sample);
