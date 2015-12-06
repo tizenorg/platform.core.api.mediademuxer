@@ -440,7 +440,6 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 			gst_object_unref(queue_srcpad);
 	}
 
-	g_free(type);
 	/* calling "on_pad_added" function to set the caps */
 	aud_srcpad = gst_element_get_static_pad(gst_handle->demux, "src");
 	if (!aud_srcpad) {
@@ -474,6 +473,7 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 	}
 	(head_track->num_audio_track)++;
 	__gst_no_more_pad(gst_handle->demux, data);
+	g_free(type);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
@@ -1210,11 +1210,16 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		indx++;
 	}
 
+	if (!atrack) {
+		MD_E("atrack is NULL\n");
+		goto ERROR;
+	}
+
 	if (media_packet_create_alloc(atrack->format, NULL, NULL, &mediabuf)) {
-			MD_E("media_packet_create_alloc failed\n");
-			ret = MD_ERROR;
-			goto ERROR;
-		}
+		MD_E("media_packet_create_alloc failed\n");
+		ret = MD_ERROR;
+		goto ERROR;
+	}
 
 	if (indx != track_indx) {
 		MD_E("Invalid track Index\n");
