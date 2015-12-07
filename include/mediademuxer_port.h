@@ -325,6 +325,20 @@ extern "C" {
  * @see mediademuxer_unset_error_cb()
  */
 typedef void (*md_error_cb)(mediademuxer_error_e error, void *user_data);
+
+/**
+ * @brief Called when eos occurs in media demuxer.
+ * @since_tizen 3.0
+ * @param[in] track_num  The track_num which indicate eos has occurred in which track numbe
+ * @param[in] user_data   The user data passed from the code where
+ *                         mediademuxer_set_eos_cb() was invoked
+ *                         This data will be accessible from @a mediademuxer_eos_cb
+ * @pre Create media demuxer handle by calling mediademuxer_create() function.
+ * @see mediademuxer_set_eos_cb()
+ * @see mediademuxer_unset_eos_cb()
+ */
+typedef void (*md_eos_cb)(int track_num, void *user_data);
+
 /**
  * Enumerations of demuxer state.
  */
@@ -346,6 +360,7 @@ typedef struct _media_port_demuxer_ops {
 	int (*unprepare)(MMHandleType pHandle);
 	int (*destroy)(MMHandleType pHandle);
 	int (*set_error_cb)(MMHandleType demuxer, md_error_cb callback, void* user_data);
+	int (*set_eos_cb)(MMHandleType demuxer, md_eos_cb callback, void* user_data);
 	int (*get_data)(MMHandleType pHandle, char *buffer);
 } media_port_demuxer_ops;
 
@@ -556,6 +571,17 @@ int md_seek(MMHandleType demuxer, int64_t pos);
  * @return  This function returns zero on success, or negative value with error code.
  */
 int md_set_error_cb(MMHandleType demuxer, md_error_cb callback, void *user_data);
+
+/**
+ * This function is to set eos call back function
+ *
+ * @param   demuxer     [in]    Handle of demuxer
+ * @param   callback    [in]    call back function pointer
+ * @param   user_data   [in]    user specific data pointer
+ *
+ * @return  This function returns zero on success, or negative value with error code.
+ */
+int md_set_eos_cb(MMHandleType demuxer, md_eos_cb callback, void *user_data);
 
 #ifdef __cplusplus
 }
