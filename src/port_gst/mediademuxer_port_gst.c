@@ -1286,6 +1286,29 @@ static int gst_demuxer_seek(MMHandleType pHandle, gint64 pos1)
 
 	gint64 pos = 0, len = 0;
 	gdouble rate = 1;
+	track_info *head_track = &(gst_handle->info);
+	track *temp = head_track->head;
+	track *temp_track = head_track->head;
+	int indx = 0;
+
+	/* Setting each appsink to paused state before seek */
+	while (temp_track) {
+		if (gst_handle->selected_tracks[indx] == true) {
+			if (gst_element_set_state(temp_track->appsink, GST_STATE_PAUSED) == GST_STATE_CHANGE_FAILURE) {
+				MD_E("Failed to set into PAUSED state");
+				goto ERROR;
+			}
+			MD_I("set the state to paused\n");
+		}
+		indx++;
+		if (temp_track->next) {
+			track *next = temp_track->next;
+			temp_track = next;
+		} else {
+			temp_track = NULL;
+		}
+	}
+
 	if (gst_element_query_position(gst_handle->pipeline, GST_FORMAT_TIME, &pos) &&
 	     gst_element_query_duration(gst_handle->pipeline, GST_FORMAT_TIME, &len)) {
 		MD_I("Time: %" GST_TIME_FORMAT " / %" GST_TIME_FORMAT "\r",
@@ -1298,9 +1321,7 @@ static int gst_demuxer_seek(MMHandleType pHandle, gint64 pos1)
 	MD_I("NEW Time: %" GST_TIME_FORMAT " / %" GST_TIME_FORMAT "\r",
 	     GST_TIME_ARGS(pos1), GST_TIME_ARGS(len));
 
-	track_info *head_track = &(gst_handle->info);
-	track *temp = head_track->head;
-	int indx = 0;
+	indx = 0;
 	while (temp) {
 		MD_I("Got one element %p\n", temp->appsink);
 		if (gst_handle->selected_tracks[indx] == true) {
@@ -1310,7 +1331,11 @@ static int gst_demuxer_seek(MMHandleType pHandle, gint64 pos1)
 				MD_E("Seek failed!\n");
 				goto ERROR;
 			} else {
-				MD_I("Seek success\n");
+				MD_I("Seek success...setting appsink to playing state\n");
+				if (gst_element_set_state(temp->appsink, GST_STATE_PLAYING) == GST_STATE_CHANGE_FAILURE) {
+					MD_E("Failed to set into PLAYING state");
+					goto ERROR;
+				}
 			}
 		}
 		indx++;
