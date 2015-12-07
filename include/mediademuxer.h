@@ -96,6 +96,19 @@ typedef enum {
 typedef void (*mediademuxer_error_cb) (mediademuxer_error_e error, void *user_data);
 
 /**
+ * @brief Called when end of stream occurs in media demuxer.
+ * @since_tizen 3.0
+ * @param[in] track_num  The track_num which indicate eos for which track number occured
+ * @param[in] user_data   The user data passed from the code where
+ *                         mediademuxer_set_eos_cb() was invoked
+ *                         This data will be accessible from @a mediademuxer_eos_cb
+ * @pre Create media demuxer handle by calling mediademuxer_create() function.
+ * @see mediademuxer_set_eos_cb()
+ * @see mediademuxer_unset_eos_cb()
+ */
+typedef void (*mediademuxer_eos_cb) (int track_num, void *user_data);
+
+/**
  * @brief Creates a media demuxer handle for demuxing.
  * @since_tizen 3.0
  * @remarks You must release @a demuxer using mediademuxer_destroy() function.
@@ -358,6 +371,35 @@ int mediademuxer_set_error_cb(mediademuxer_h demuxer, mediademuxer_error_cb call
  * @see mediademuxer_error_cb()
  * */
 int mediademuxer_unset_error_cb(mediademuxer_h demuxer);
+
+/**
+ * @brief Registers a eos callback function to be invoked when an eos occurs.
+ * @since_tizen 3.0
+ * @param[in] demuxer   The media demuxer handle
+ * @param[in] callback  Callback function pointer
+ * @param[in] user_data   The user data passed from the code where
+ *                         mediademuxer_set_eos_cb() was invoked
+ *                         This data will be accessible from @a mediademuxer_eos_cb
+ * @return @c 0 on success, otherwise a negative error value
+ * @retval #MEDIADEMUXER_ERROR_NONE Successful
+ * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @pre Create a media demuxer handle by calling mediademuxer_create() function.
+ * @post mediademuxer_eos_cb() will be invoked.
+ * @see mediademuxer_unset_eos_cb()
+ * @see mediademuxer_eos_cb()
+ * */
+int mediademuxer_set_eos_cb(mediademuxer_h demuxer, mediademuxer_eos_cb callback, void *user_data);
+
+/**
+ * @brief Unregisters the eos callback function.
+ * @since_tizen 3.0
+ * @param[in] demuxer   The media demuxer handle
+ * @return @c 0 on success, otherwise a negative error value
+ * @retval #MEDIADEMUXER_ERROR_NONE Successful
+ * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @see mediademuxer_eos_cb()
+ * */
+int mediademuxer_unset_eos_cb(mediademuxer_h demuxer);
 
 /**
  * @}

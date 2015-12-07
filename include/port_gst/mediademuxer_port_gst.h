@@ -113,6 +113,18 @@ typedef struct _mdgst_handle_t {
  */
 typedef void (*gst_error_cb)(mediademuxer_error_e error, void *user_data);
 
+/**
+ * @brief Called when the eos has occured.
+ * @since_tizen 3.0
+ * @details It will be invoked when the eos has occured.
+ * @param[in] track_num  track number to indicate eos
+ * @param[in] user_data  The user data passed from the callback registration function
+ * @pre It will be invoked when the eos has occured if user register this callback using mediademuxer_set_eos_cb().
+ * @see mediademuxer_set_eos_cb()
+ * @see mediademuxer_unset_eos_cb()
+ */
+typedef void (*gst_eos_cb)(int track_num, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif

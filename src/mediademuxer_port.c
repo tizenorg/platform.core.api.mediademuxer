@@ -398,7 +398,7 @@ int md_read_sample(MMHandleType demuxer, int track_indx, media_packet_h *outbuf)
 	media_port_demuxer_ops *pOps = md_handle->demuxer_ops;
 	MEDIADEMUXER_CHECK_NULL(pOps);
 	result = pOps->read_sample(md_handle->mdport_handle, outbuf, track_indx);
-	if (result == MD_EOS || result == MD_ERROR_NONE) {
+	if (result == MD_ERROR_NONE) {
 		MEDIADEMUXER_FLEAVE();
 		return result;
 	} else {
@@ -533,6 +533,26 @@ int md_set_error_cb(MMHandleType demuxer,
 	result = pOps->set_error_cb(md_handle->mdport_handle, callback, user_data);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
 			MD_ERROR, "error while setting error call back");
+	MEDIADEMUXER_FLEAVE();
+	return result;
+ERROR:
+	result = MD_ERROR_INVALID_ARGUMENT;
+	MEDIADEMUXER_FLEAVE();
+	return result;
+}
+
+int md_set_eos_cb(MMHandleType demuxer,
+			mediademuxer_eos_cb callback, void *user_data)
+{
+	MEDIADEMUXER_FENTER();
+	int result = MD_ERROR_NONE;
+	md_handle_t *md_handle = (md_handle_t *) demuxer;
+	MEDIADEMUXER_CHECK_NULL(md_handle);
+	media_port_demuxer_ops *pOps = md_handle->demuxer_ops;
+	MEDIADEMUXER_CHECK_NULL(pOps);
+	result = pOps->set_eos_cb(md_handle->mdport_handle, callback, user_data);
+	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
+			MD_ERROR, "error while setting eos call back");
 	MEDIADEMUXER_FLEAVE();
 	return result;
 ERROR:

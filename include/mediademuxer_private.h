@@ -71,6 +71,8 @@ typedef struct _mediademuxer_s {
 	pthread_t prepare_async_thread;
 	mediademuxer_error_cb error_cb;
 	void* error_cb_userdata;
+	mediademuxer_eos_cb eos_cb;
+	void* eos_cb_userdata;
 	mediademuxer_state demux_state;
 } mediademuxer_s;
 
