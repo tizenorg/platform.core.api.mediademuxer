@@ -33,6 +33,7 @@
 * Public Implementation
 */
 static gboolean _mediademuxer_error_cb(mediademuxer_error_e error, void *user_data);
+static gboolean _mediademuxer_eos_cb(int track_num, void *user_data);
 
 int mediademuxer_create(mediademuxer_h *demuxer)
 {
@@ -73,6 +74,10 @@ int mediademuxer_create(mediademuxer_h *demuxer)
 	md_set_error_cb(handle->md_handle,
 			(mediademuxer_error_cb) _mediademuxer_error_cb,
 			handle);
+	md_set_eos_cb(handle->md_handle,
+			(mediademuxer_eos_cb) _mediademuxer_eos_cb,
+			handle);
+
 	handle->demux_state = MEDIADEMUXER_IDLE;
 	return MEDIADEMUXER_ERROR_NONE;
 }
@@ -392,5 +397,48 @@ static gboolean _mediademuxer_error_cb(mediademuxer_error_e error, void *user_da
 		((mediademuxer_error_cb)handle->error_cb)(error, handle->error_cb_userdata);
 	else
 		MD_I("_mediademuxer_error_cb: ERROR %d to report. But call back is not set\n", error);
+	return 0;
+}
+
+int mediademuxer_set_eos_cb(mediademuxer_h demuxer,
+			mediademuxer_eos_cb callback, void *user_data)
+{
+	DEMUXER_INSTANCE_CHECK(demuxer);
+	mediademuxer_s *handle;
+	handle = (mediademuxer_s *)(demuxer);
+	if (handle->demux_state != MEDIADEMUXER_IDLE)
+		return MEDIADEMUXER_ERROR_INVALID_STATE;
+	handle->eos_cb = callback;
+	handle->eos_cb_userdata = user_data;
+	MD_I("set eos_cb(%p)", callback);
+	return MEDIADEMUXER_ERROR_NONE;
+}
+
+int mediademuxer_unset_eos_cb(mediademuxer_h demuxer)
+{
+	DEMUXER_INSTANCE_CHECK(demuxer);
+	mediademuxer_s *handle;
+	handle = (mediademuxer_s *)(demuxer);
+	if (handle->demux_state != MEDIADEMUXER_IDLE)
+		return MEDIADEMUXER_ERROR_INVALID_STATE;
+	handle->eos_cb = NULL;
+	handle->eos_cb_userdata = NULL;
+	MD_I("mediademuxer_unset_eos_cb\n");
+	return MEDIADEMUXER_ERROR_NONE;
+}
+
+static gboolean _mediademuxer_eos_cb(int track_num, void *user_data)
+{
+	if (user_data == NULL) {
+		MD_I("_mediademuxer_eos_cb: EOS to report. But call back is not set\n");
+		return 0;
+	}
+	mediademuxer_s *handle = (mediademuxer_s *)user_data;
+	if (handle->demux_state != MEDIADEMUXER_DEMUXING)
+		return MEDIADEMUXER_ERROR_INVALID_STATE;
+	if (handle->eos_cb)
+		((mediademuxer_eos_cb)handle->eos_cb)(track_num, handle->eos_cb_userdata);
+	else
+		MD_I("_mediademuxer_eos_cb: EOS %d to report. But call back is not set\n", track_num);
 	return 0;
 }

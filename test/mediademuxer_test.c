@@ -26,7 +26,6 @@
 #include <glib.h>
 #include <mm_error.h>
 #include <mm_debug.h>
-#include <mediademuxer_error.h>
 #include <mediademuxer.h>
 #include <media_format.h>
 #include <media_packet.h>
@@ -60,6 +59,8 @@ int channel = 0;
 int samplerate = 0;
 int bit = 0;
 bool is_adts = 0;
+bool vid_eos_track = 0;
+bool aud_eos_track = 0;
 
 /*-----------------------------------------------------------------------
 |    DEBUG DEFINITIONS                                                            |
@@ -76,7 +77,7 @@ bool is_adts = 0;
 	do {\
 		int ret = 0; \
 		ret = expr; \
-		if (ret != MD_ERROR_NONE) {\
+		if (ret != MEDIADEMUXER_ERROR_NONE) {\
 			printf("[%s:%d] error code : %x \n", __func__, __LINE__, ret); \
 			return; \
 		} \
@@ -387,7 +388,7 @@ static void mediacodec_process_audio_pkt(media_packet_h in_buf)
 
 void *_fetch_audio_data(void *ptr)
 {
-	int ret = MD_ERROR_NONE;
+	int ret = MEDIADEMUXER_ERROR_NONE;
 	int *status = (int *)g_malloc(sizeof(int) * 1);
 	media_packet_h audbuf;
 	int count = 0;
@@ -432,13 +433,12 @@ void *_fetch_audio_data(void *ptr)
 
 	while (1) {
 		ret = mediademuxer_read_sample(demuxer, aud_track, &audbuf);
-		if (ret == MD_EOS) {
-			g_print("EOS return of mediademuxer_read_sample()\n");
-			pthread_exit(NULL);
-		} else if (ret != MD_ERROR_NONE) {
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
 			g_print("Error (%d) return of mediademuxer_read_sample()\n", ret);
 			pthread_exit(NULL);
 		}
+		if (aud_eos_track)
+			break;
 		count++;
 		media_packet_get_buffer_size(audbuf, &buf_size);
 		media_packet_get_buffer_data_ptr(audbuf, &data);
@@ -475,6 +475,7 @@ void *_fetch_audio_data(void *ptr)
 			media_packet_destroy(audbuf);
 	}
 
+	g_print("EOS return of mediademuxer_read_sample() for audio\n");
 	*status = 0;
 	if (validate_with_codec)
 		mediacodec_finish(g_media_codec, fp_out_codec_audio);
@@ -580,7 +581,7 @@ static void _local_media_packet_get_codec_data(media_packet_h pkt)
 
 void *_fetch_video_data(void *ptr)
 {
-	int ret = MD_ERROR_NONE;
+	int ret = MEDIADEMUXER_ERROR_NONE;
 	int *status = (int *)g_malloc(sizeof(int) * 1);
 	media_packet_h vidbuf;
 	int count = 0;
@@ -608,13 +609,12 @@ void *_fetch_video_data(void *ptr)
 	}
 	while (1) {
 		ret = mediademuxer_read_sample(demuxer, vid_track, &vidbuf);
-		if (ret == MD_EOS) {
-			g_print("EOS return of mediademuxer_read_sample()\n");
-			pthread_exit(NULL);
-		} else if (ret != MD_ERROR_NONE) {
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
 			g_print("Error (%d) return of mediademuxer_read_sample()\n", ret);
 			pthread_exit(NULL);
 		}
+		if (vid_eos_track)
+			break;
 		count++;
 		media_packet_get_buffer_size(vidbuf, &buf_size);
 		media_packet_get_buffer_data_ptr(vidbuf, &data);
@@ -637,6 +637,7 @@ void *_fetch_video_data(void *ptr)
 		else
 			media_packet_destroy(vidbuf);
 	}
+	g_print("EOS return of mediademuxer_read_sample() for video\n");
 	*status = 0;
 	if (validate_with_codec)
 		mediacodec_finish(g_media_codec_1, fp_out_codec_video);
@@ -739,6 +740,17 @@ void app_err_cb(mediademuxer_error_e error, void *user_data)
 	printf("Got Error %d from Mediademuxer\n", error);
 }
 
+void app_eos_cb(int track_index, void *user_data)
+{
+	printf("Got EOS for track -- %d from Mediademuxer\n", track_index);
+	if (track_index == vid_track)
+		vid_eos_track = true;
+	else if (track_index == aud_track)
+		aud_eos_track = true;
+	else
+		g_print("EOS for invalid track number\n");
+}
+
 int test_mediademuxer_set_error_cb()
 {
 	int ret = 0;
@@ -747,6 +759,13 @@ int test_mediademuxer_set_error_cb()
 	return ret;
 }
 
+int test_mediademuxer_set_eos_cb()
+{
+	int ret = 0;
+	g_print("test_mediademuxer_set_eos_cb\n");
+	ret = mediademuxer_set_eos_cb(demuxer, app_eos_cb, demuxer);
+	return ret;
+}
 
 /*-----------------------------------------------------------------------
 |    EXTRA FUNCTION                                                                 |
@@ -811,6 +830,7 @@ static void display_sub_basic()
 	g_print("---------------------------------------------------------------------------\n");
 	g_print("c. Create \t");
 	g_print("s. Set callback \t");
+	g_print("e. Set eos callback \t");
 	g_print("p. Path \t");
 	g_print("d. Destroy \t");
 	g_print("q. Quit \n");
@@ -829,6 +849,8 @@ void _interpret_main_menu(char *cmd)
 			test_mediademuxer_create();
 		} else if (strncmp(cmd, "s", 1) == 0) {
 			test_mediademuxer_set_error_cb();
+		} else if (strncmp(cmd, "e", 1) == 0) {
+			test_mediademuxer_set_eos_cb();
 		} else if (strncmp(cmd, "p", 1) == 0) {
 			g_menu_state = CURRENT_STATUS_FILENAME;
 		} else if (strncmp(cmd, "d", 1) == 0) {
@@ -901,9 +923,9 @@ static void interpret(char *cmd)
 	case CURRENT_STATUS_FILENAME: {
 			int ret = 0;
 			ret = test_mediademuxer_set_data_source(demuxer, cmd);
-			if (ret != MD_ERROR_INVALID_ARGUMENT) {
+			if (ret != MEDIADEMUXER_ERROR_INVALID_PARAMETER) {
 				ret = test_mediademuxer_prepare();
-				if (ret != MD_ERROR_INVALID_ARGUMENT) {
+				if (ret != MEDIADEMUXER_ERROR_INVALID_PARAMETER) {
 					g_menu_state = CURRENT_STATUS_SET_DATA;
 				} else {
 					g_print("test_mediademuxer_prepare failed \n");

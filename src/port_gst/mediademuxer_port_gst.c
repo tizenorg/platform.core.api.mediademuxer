@@ -43,6 +43,9 @@ static int gst_demuxer_unprepare(MMHandleType pHandle);
 static int gst_demuxer_destroy(MMHandleType pHandle);
 static int gst_set_error_cb(MMHandleType pHandle,
 			gst_error_cb callback, void* user_data);
+static int gst_set_eos_cb(MMHandleType pHandle,
+			gst_eos_cb callback, void *user_data);
+static int __gst_eos_callback(int track_num, void* user_data);
 
 /* Media Demuxer API common */
 static media_port_demuxer_ops def_demux_ops = {
@@ -60,6 +63,7 @@ static media_port_demuxer_ops def_demux_ops = {
 	.unprepare = gst_demuxer_unprepare,
 	.destroy = gst_demuxer_destroy,
 	.set_error_cb = gst_set_error_cb,
+	.set_eos_cb = gst_set_eos_cb,
 };
 
 int gst_port_register(media_port_demuxer_ops *pOps)
@@ -1232,9 +1236,10 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	sample = gst_app_sink_pull_sample((GstAppSink *) sink);
 	if (sample == NULL) {
 		if (gst_app_sink_is_eos((GstAppSink *) sink)) {
-			MD_W("End of stream (EOS) reached\n");
-			ret = MD_EOS;
-			goto ERROR;
+			MD_W("End of stream (EOS) reached, triggering the eos callback\n");
+			ret = MD_ERROR_NONE;
+			__gst_eos_callback(track_indx, demuxer);
+			return ret;
 		} else {
 			MD_E("gst_demuxer_read_sample failed\n");
 			ret = MD_ERROR_UNKNOWN;
@@ -1510,4 +1515,54 @@ int gst_set_error_cb(MMHandleType pHandle,
 ERROR:
 	MEDIADEMUXER_FLEAVE();
 	return ret;
+}
+
+int gst_set_eos_cb(MMHandleType pHandle, gst_eos_cb callback, void *user_data)
+{
+	MEDIADEMUXER_FENTER();
+	int ret = MD_ERROR_NONE;
+	MEDIADEMUXER_CHECK_NULL(pHandle);
+	mdgst_handle_t *gst_handle = (mdgst_handle_t *) pHandle;
+
+	if (!gst_handle) {
+		MD_E("fail invaild param (gst_handle)\n");
+		ret = MD_INVALID_ARG;
+		goto ERROR;
+	}
+
+	if (gst_handle->user_cb[_GST_EVENT_TYPE_EOS]) {
+		MD_E("Already set mediademuxer_eos_cb\n");
+		ret = MD_ERROR_INVALID_ARGUMENT;
+		goto ERROR;
+	} else {
+		if (!callback) {
+			MD_E("fail invaild argument (callback)\n");
+			ret = MD_ERROR_INVALID_ARGUMENT;
+			goto ERROR;
+		}
+	}
+
+	MD_I("Set event handler callback(cb = %p, data = %p)\n", callback, user_data);
+	gst_handle->user_cb[_GST_EVENT_TYPE_EOS] = (gst_eos_cb) callback;
+	gst_handle->user_data[_GST_EVENT_TYPE_EOS] = user_data;
+	MEDIADEMUXER_FLEAVE();
+	return MD_ERROR_NONE;
+ERROR:
+	MEDIADEMUXER_FLEAVE();
+	return ret;
+}
+
+static int __gst_eos_callback(int track_num, void* user_data)
+{
+	if (user_data == NULL) {
+		MD_E("Invalid argument");
+		return MD_ERROR;
+	}
+	mdgst_handle_t *gst_handle = (mdgst_handle_t *) user_data;
+	if (gst_handle->user_cb[_GST_EVENT_TYPE_EOS])
+		((gst_eos_cb)gst_handle->user_cb[_GST_EVENT_TYPE_EOS])(track_num,
+					gst_handle->user_data[_GST_EVENT_TYPE_EOS]);
+	else
+		MD_E("EOS received, but callback is not set!!!");
+	return MD_ERROR_NONE;
 }
