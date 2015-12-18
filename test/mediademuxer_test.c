@@ -923,9 +923,9 @@ static void interpret(char *cmd)
 	case CURRENT_STATUS_FILENAME: {
 			int ret = 0;
 			ret = test_mediademuxer_set_data_source(demuxer, cmd);
-			if (ret != MEDIADEMUXER_ERROR_INVALID_PARAMETER) {
+			if (ret == MEDIADEMUXER_ERROR_NONE) {
 				ret = test_mediademuxer_prepare();
-				if (ret != MEDIADEMUXER_ERROR_INVALID_PARAMETER) {
+				if (ret == MEDIADEMUXER_ERROR_NONE) {
 					g_menu_state = CURRENT_STATUS_SET_DATA;
 				} else {
 					g_print("test_mediademuxer_prepare failed \n");

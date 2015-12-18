@@ -393,32 +393,6 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 			goto ERROR;
 		}
 		gst_pad_unlink(pad, fake_pad);
-		if (strstr(type, "adif")) {
-			adif_queue = gst_element_factory_make("queue", NULL);
-			if (!adif_queue) {
-				MD_E("factory not able to make queue in case of adif aac\n");
-				goto ERROR;
-			}
-			/* Add this queue to the pipeline */
-			gst_bin_add_many(GST_BIN(gst_handle->pipeline), adif_queue, NULL);
-			queue_srcpad = gst_element_get_static_pad(adif_queue, "src");
-			if (!queue_srcpad) {
-				MD_E("fail to get queue src pad for adif aac.\n");
-				goto ERROR;
-			}
-			queue_sinkpad = gst_element_get_static_pad(adif_queue, "sink");
-			if (!queue_sinkpad) {
-				MD_E("fail to get queue sink pad for adif aac.\n");
-				goto ERROR;
-			}
-			/* link typefind with queue */
-			MEDIADEMUXER_LINK_PAD(pad, queue_sinkpad, ERROR);
-			/* link queue with aacparse */
-			MEDIADEMUXER_LINK_PAD(queue_srcpad, aud_pad, ERROR);
-		} else {
-			MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
-		}
-
 		if (!id3tag) {
 			MEDIADEMUXER_SET_STATE(gst_handle->demux,
 					       GST_STATE_PAUSED, ERROR);
@@ -428,20 +402,6 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 					       GST_STATE_PAUSED, ERROR);
 			gst_element_link(id3tag, gst_handle->demux);
 		}
-
-		if (adif_queue)
-			MEDIADEMUXER_SET_STATE(adif_queue, GST_STATE_PAUSED, ERROR);
-
-		if (pad)
-			gst_object_unref(pad);
-		if (aud_pad)
-			gst_object_unref(aud_pad);
-		if (fake_pad)
-			gst_object_unref(fake_pad);
-		if (queue_sinkpad)
-			gst_object_unref(queue_sinkpad);
-		if (queue_srcpad)
-			gst_object_unref(queue_srcpad);
 	}
 
 	/* calling "on_pad_added" function to set the caps */
@@ -462,6 +422,43 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 		__gst_free_stuct(&(head_track->head));
 		goto ERROR;
 	}
+	if (strstr(type, "adif")) {
+		adif_queue = gst_element_factory_make("queue", NULL);
+		if (!adif_queue) {
+				MD_E("factory not able to make queue in case of adif aac\n");
+				goto ERROR;
+		}
+		/* Add this queue to the pipeline */
+		gst_bin_add_many(GST_BIN(gst_handle->pipeline), adif_queue, NULL);
+		queue_srcpad = gst_element_get_static_pad(adif_queue, "src");
+		if (!queue_srcpad) {
+				MD_E("fail to get queue src pad for adif aac.\n");
+				goto ERROR;
+		}
+		queue_sinkpad = gst_element_get_static_pad(adif_queue, "sink");
+		if (!queue_sinkpad) {
+				MD_E("fail to get queue sink pad for adif aac.\n");
+				goto ERROR;
+		}
+		/* link typefind with queue */
+		MEDIADEMUXER_LINK_PAD(pad, queue_sinkpad, ERROR);
+		/* link queue with aacparse */
+		MEDIADEMUXER_LINK_PAD(queue_srcpad, aud_pad, ERROR);
+		} else {
+		MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
+		}
+	if (adif_queue)
+		MEDIADEMUXER_SET_STATE(adif_queue, GST_STATE_PAUSED, ERROR);
+	if (pad)
+		gst_object_unref(pad);
+	if (aud_pad)
+		gst_object_unref(aud_pad);
+	if (fake_pad)
+		gst_object_unref(fake_pad);
+	if (queue_sinkpad)
+		gst_object_unref(queue_sinkpad);
+	if (queue_srcpad)
+		gst_object_unref(queue_srcpad);
 	if (aud_srcpad)
 		gst_object_unref(aud_srcpad);
 
@@ -674,6 +671,7 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 		if (count > POLLING_INTERVAL) {
 			MD_E("Error occure\n");
 			ret = MD_ERROR;
+			break;
 		}
 	}
 
@@ -815,6 +813,9 @@ int _set_mime_video(media_format_h format, track *head)
 	GstStructure *struc = NULL;
 	int src_width;
 	int src_height;
+	int frame_rate_numerator = 0;
+	int frame_rate_denominator = 0;
+	media_format_mimetype_e mime_type = MEDIA_FORMAT_MAX;
 	struc = gst_caps_get_structure(head->caps, 0);
 	if (!struc) {
 		MD_E("cannot get structure from caps.\n");
@@ -822,27 +823,31 @@ int _set_mime_video(media_format_h format, track *head)
 	}
 	if (gst_structure_has_name(struc, "video/x-h264")) {
 		const gchar *version = gst_structure_get_string(struc, "stream-format");
-		if (strncmp(version, "avc", 3) == 0) {
-			gst_structure_get_int(struc, "width", &src_width);
-			gst_structure_get_int(struc, "height", &src_height);
-			if (media_format_set_video_mime(format, MEDIA_FORMAT_H264_SP))
-				goto ERROR;
-			if (media_format_set_video_width(format, src_width))
-				goto ERROR;
-			if (media_format_set_video_height(format, src_height))
-				goto ERROR;
+		if (strncmp(version, "avc", 3) == 0)
+			mime_type = MEDIA_FORMAT_H264_SP;
+		else {
+			MD_W("Video mime (%s) not supported so far\n", gst_structure_get_name(struc));
+			goto ERROR;
 		}
 	} else if (gst_structure_has_name(struc, "video/x-h263")) {
-		gst_structure_get_int(struc, "width", &src_width);
-		gst_structure_get_int(struc, "height", &src_height);
-		if (media_format_set_video_mime(format, MEDIA_FORMAT_H263))
-			goto ERROR;
-		if (media_format_set_video_width(format, src_width))
-			goto ERROR;
-		if (media_format_set_video_height(format, src_height))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_H263;
 	} else {
-		MD_I("Video mime not supported so far\n");
+		MD_W("Video mime (%s) not supported so far\n", gst_structure_get_name(struc));
+		goto ERROR;
+	}
+	if (media_format_set_video_mime(format, mime_type)) {
+		MD_E("Unable to set video mime type (%x)\n", mime_type);
+		goto ERROR;
+	}
+	gst_structure_get_int(struc, "width", &src_width);
+	gst_structure_get_int(struc, "height", &src_height);
+	if (media_format_set_video_width(format, src_width))
+		goto ERROR;
+	if (media_format_set_video_height(format, src_height))
+			goto ERROR;
+	gst_structure_get_fraction(struc, "framerate",  &frame_rate_numerator, &frame_rate_denominator);
+	if (media_format_set_video_frame_rate(format, frame_rate_numerator)) {
+		MD_E("Unable to set video frame rate\n");
 		goto ERROR;
 	}
 	MEDIADEMUXER_FLEAVE();
@@ -862,6 +867,7 @@ int _set_mime_audio(media_format_h format, track *head)
 	int channels = 0;
 	int id3_flag = 0;
 	const gchar *stream_format;
+	media_format_mimetype_e mime_type = MEDIA_FORMAT_MAX;
 
 	struc = gst_caps_get_structure(head->caps, 0);
 	if (!struc) {
@@ -876,49 +882,16 @@ int _set_mime_audio(media_format_h format, track *head)
 		int layer;
 		gst_structure_get_int(struc, "mpegversion", &mpegversion);
 		if (mpegversion == 4 || mpegversion == 2) {
-			gst_structure_get_int(struc, "channels", &channels);
-			gst_structure_get_int(struc, "rate", &rate);
-			gst_structure_get_int(struc, "bit", &bit);
+			mime_type = MEDIA_FORMAT_AAC_LC;
 			stream_format = gst_structure_get_string(struc, "stream-format");
-			if (media_format_set_audio_mime(format, MEDIA_FORMAT_AAC_LC))
-				goto ERROR;
-			if (channels == 0)
-				channels = 2;	/* default */
-			if (media_format_set_audio_channel(format, channels))
-				goto ERROR;
-			if (rate == 0)
-				rate = 44100;	/* default */
-			if (media_format_set_audio_samplerate(format, rate))
-				goto ERROR;
-			if (bit == 0)
-				bit = 16;	/* default */
-			if (media_format_set_audio_bit(format, bit))
-				goto ERROR;
 			if (strncmp(stream_format, "adts", 4) == 0)
 				media_format_set_audio_aac_type(format, 1);
 			else
 				media_format_set_audio_aac_type(format, 0);
-		}
-		if (mpegversion == 1 || id3_flag) {
+		} else if (mpegversion == 1 || id3_flag) {
 			gst_structure_get_int(struc, "layer", &layer);
 			if ((layer == 3) || (id3_flag == 1)) {
-				gst_structure_get_int(struc, "channels", &channels);
-				gst_structure_get_int(struc, "rate", &rate);
-				gst_structure_get_int(struc, "bit", &bit);
-				if (media_format_set_audio_mime(format, MEDIA_FORMAT_MP3))
-					goto ERROR;
-				if (channels == 0)
-					channels = 2;	/* default */
-				if (media_format_set_audio_channel(format, channels))
-					goto ERROR;
-				if (rate == 0)
-					rate = 44100;	/* default */
-				if (bit == 0)
-					bit = 16;	/* default */
-				if (media_format_set_audio_samplerate(format, rate))
-					goto ERROR;
-				if (media_format_set_audio_bit(format, bit))
-					goto ERROR;
+				mime_type = MEDIA_FORMAT_MP3;
 			} else {
 				MD_I("No Support for MPEG%d Layer %d media\n", mpegversion, layer);
 				goto ERROR;
@@ -926,9 +899,6 @@ int _set_mime_audio(media_format_h format, track *head)
 		}
 	} else if (gst_structure_has_name(struc, "audio/x-amr-nb-sh") ||
 		gst_structure_has_name(struc, "audio/x-amr-wb-sh")) {
-		media_format_mimetype_e mime_type;
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
 		if (gst_structure_has_name(struc, "audio/x-amr-nb-sh")) {
 			mime_type = MEDIA_FORMAT_AMR_NB;
 			rate = 8000;
@@ -936,108 +906,42 @@ int _set_mime_audio(media_format_h format, track *head)
 			mime_type = MEDIA_FORMAT_AMR_WB;
 			rate = 16000;
 		}
-		if (media_format_set_audio_mime(format, mime_type))
-			goto ERROR;
-		if (channels == 0)
-			channels = 1;	/* default */
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
 	} else if (gst_structure_has_name(struc, "audio/AMR")) {
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
-		gst_structure_get_int(struc, "bit", &bit);
-		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_NB))
-			goto ERROR;
-		if (channels == 0)
-			channels = 1;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_AMR_NB;
 	} else if (gst_structure_has_name(struc, "audio/AMR-WB")) {
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
-		gst_structure_get_int(struc, "bit", &bit);
-		if (media_format_set_audio_mime(format, MEDIA_FORMAT_AMR_WB))
-			goto ERROR;
-		if (channels == 0)
-			channels = 1;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_AMR_WB;
 	} else if (gst_structure_has_name(struc, "audio/x-wav")) {
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
-		gst_structure_get_int(struc, "bit", &bit);
-		if (media_format_set_audio_mime(format, MEDIA_FORMAT_PCM))
-			goto ERROR;
-		if (channels == 0)
-			channels = 2;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (rate == 0)
-			rate = 44100;	/* default */
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_PCM;
 	} else if (gst_structure_has_name(struc, "audio/x-flac")) {
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
-		gst_structure_get_int(struc, "bit", &bit);
-		if (media_format_set_audio_mime(format, MEDIA_FORMAT_FLAC))
-			goto ERROR;
-		if (channels == 0)
-			channels = 2;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (rate == 0)
-			rate = 44100;	/* default */
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_FLAC;
 	} else if (gst_structure_has_name(struc, "audio/x-vorbis")) {
-		gst_structure_get_int(struc, "channels", &channels);
-		gst_structure_get_int(struc, "rate", &rate);
-		gst_structure_get_int(struc, "bit", &bit);
-		if (media_format_set_audio_mime(format, MEDIA_FORMAT_VORBIS))
-			goto ERROR;
-		if (channels == 0)
-			channels = 2;	/* default */
-		if (media_format_set_audio_channel(format, channels))
-			goto ERROR;
-		if (rate == 0)
-			rate = 44100;	/* default */
-		if (media_format_set_audio_samplerate(format, rate))
-			goto ERROR;
-		if (bit == 0)
-			bit = 16;	/* default */
-		if (media_format_set_audio_bit(format, bit))
-			goto ERROR;
+		mime_type = MEDIA_FORMAT_VORBIS;
 	} else {
-		MD_I("Audio mime not supported so far\n");
+		MD_W("Audio mime (%s) not supported so far\n", gst_structure_get_name(struc));
 		goto ERROR;
 	}
+	if (media_format_set_audio_mime(format, mime_type))
+		goto ERROR;
+	gst_structure_get_int(struc, "channels", &channels);
+	if (channels == 0) {		/* default */
+		if (mime_type == MEDIA_FORMAT_AMR_NB || mime_type == MEDIA_FORMAT_AMR_WB)
+			channels = 1;
+		else
+			channels = 2;
+	}
+	if (media_format_set_audio_channel(format, channels))
+		goto ERROR;
+	if (rate == 0)
+		gst_structure_get_int(struc, "rate", &rate);
+	if (rate == 0)
+		rate = 44100;			/* default */
+	if (media_format_set_audio_samplerate(format, rate))
+		goto ERROR;
+	gst_structure_get_int(struc, "bit", &bit);
+	if (bit == 0)
+		bit = 16;				/* default */
+	if (media_format_set_audio_bit(format, bit))
+		goto ERROR;
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
