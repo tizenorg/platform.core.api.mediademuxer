@@ -184,7 +184,8 @@ mediademuxer_src_type __md_util_media_type(char **uri)
 			}
 			return MD_ERROR_NONE;
 		} else {
-			MD_E("could  access %s.\n", path);
+			MD_E("could not access %s.\n", path);
+			goto ERROR;
 		}
 	} else if ((path = strstr(*uri, "rtsp://"))) {
 		if (strlen(path)) {
@@ -300,6 +301,7 @@ int md_prepare(MMHandleType demuxer)
 	MEDIADEMUXER_CHECK_NULL(md_handle);
 	media_port_demuxer_ops *pOps = md_handle->demuxer_ops;
 	MEDIADEMUXER_CHECK_NULL(pOps);
+	MEDIADEMUXER_CHECK_NULL(md_handle->uri_src);
 	result = pOps->prepare(md_handle->mdport_handle, md_handle->uri_src);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
 									MD_ERROR, "error while doing prepare");
