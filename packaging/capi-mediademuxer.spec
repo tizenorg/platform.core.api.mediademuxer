@@ -19,10 +19,6 @@ BuildRequires:  pkgconfig(gstreamer-video-1.0)
 BuildRequires:  pkgconfig(gstreamer-app-1.0)
 BuildRequires:  pkgconfig(iniparser)
 
-Requires(post): /sbin/ldconfig
-Requires(post): libprivilege-control
-Requires(postun): /sbin/ldconfig
-
 %description
 
 %package devel
