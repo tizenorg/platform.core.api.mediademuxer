@@ -213,7 +213,11 @@ mediademuxer_src_type __md_util_media_type(char **uri)
 			strncpy(old_uristr, *uri, len_uri + 1);
 			/* need to added 7 char for file:// + 1 for '\0'+ uri len */
 			new_uristr = (char *)realloc(*uri, (7 + len_uri + 1) * sizeof(char));
-			MEDIADEMUXER_CHECK_NULL(new_uristr);
+			if (!new_uristr) {
+				free(old_uristr);
+				old_uristr = NULL;
+				return MD_ERROR_INVALID_ARGUMENT;
+			}
 			MD_L("reallocating uri[%p] to new_uristr[%p] \n", *uri, new_uristr);
 			*uri = new_uristr;
 			g_snprintf(*uri, 7 + len_uri + 1, "file://%s", old_uristr);
