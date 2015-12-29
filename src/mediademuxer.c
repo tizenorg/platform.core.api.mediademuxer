@@ -18,8 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlog.h>
-#include <mm.h>
-#include <mm_types.h>
 
 #include <mediademuxer.h>
 #include <mediademuxer_private.h>
@@ -121,7 +119,11 @@ int mediademuxer_prepare(mediademuxer_h demuxer)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_IDLE) {
 		ret = md_prepare((MMHandleType) (handle->md_handle));
-		if (ret == MEDIADEMUXER_ERROR_NONE)
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		} else
 			handle->demux_state = MEDIADEMUXER_READY;
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_IDLE)
@@ -142,6 +144,11 @@ int mediademuxer_get_track_count(mediademuxer_h demuxer, int *count)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_get_track_count((MMHandleType) (handle->md_handle), count);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -161,6 +168,11 @@ int mediademuxer_select_track(mediademuxer_h demuxer, int track_index)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_select_track((MMHandleType) (handle->md_handle), track_index);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -180,7 +192,11 @@ int mediademuxer_start(mediademuxer_h demuxer)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_start((MMHandleType) (handle->md_handle));
-		if (ret == MEDIADEMUXER_ERROR_NONE)
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		} else
 			handle->demux_state = MEDIADEMUXER_DEMUXING;
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
@@ -207,6 +223,11 @@ int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index,
 	if (handle && (handle->demux_state == MEDIADEMUXER_READY
 		|| handle->demux_state == MEDIADEMUXER_DEMUXING)) {
 		ret = md_get_track_info((MMHandleType) (handle->md_handle), track_index, format);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -229,6 +250,11 @@ int mediademuxer_read_sample(mediademuxer_h demuxer, int track_index,
 		return MEDIADEMUXER_ERROR_INVALID_PARAMETER;
 	if (handle && handle->demux_state == MEDIADEMUXER_DEMUXING) {
 		ret = md_read_sample((MMHandleType) (handle->md_handle), track_index, outbuf);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -248,6 +274,11 @@ int mediademuxer_seek(mediademuxer_h demuxer, int64_t pos)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_DEMUXING) {
 		ret = md_seek((MMHandleType) (handle->md_handle), pos);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -268,6 +299,11 @@ int mediademuxer_unselect_track(mediademuxer_h demuxer, int track_index)
 	if (handle && (handle->demux_state == MEDIADEMUXER_READY
 		|| handle->demux_state == MEDIADEMUXER_DEMUXING)) {
 		ret = md_unselect_track((MMHandleType) (handle->md_handle), track_index);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -287,7 +323,11 @@ int mediademuxer_stop(mediademuxer_h demuxer)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_DEMUXING) {
 		ret = md_stop((MMHandleType) (handle->md_handle));
-		if (ret == MEDIADEMUXER_ERROR_NONE)
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		} else
 			handle->demux_state = MEDIADEMUXER_READY;
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_DEMUXING)
@@ -308,7 +348,11 @@ int mediademuxer_unprepare(mediademuxer_h demuxer)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && handle->demux_state == MEDIADEMUXER_READY) {
 		ret = md_unprepare((MMHandleType) (handle->md_handle));
-		if (ret == MEDIADEMUXER_ERROR_NONE)
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
+				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
+			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
+		} else
 			handle->demux_state = MEDIADEMUXER_IDLE;
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
