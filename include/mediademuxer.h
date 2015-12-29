@@ -115,6 +115,8 @@ typedef void (*mediademuxer_eos_cb) (int track_num, void *user_data);
  * @param[out] demuxer    A new handle to media demuxer
  * @return @c 0 on success, otherwise a negative error value
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
+ * @retval #MEDIADEMUXER_ERROR_OUT_OF_MEMORY Out of memory
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_IDLE.
  * @see mediademuxer_destroy()
@@ -133,7 +135,7 @@ int mediademuxer_create(mediademuxer_h *demuxer);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
- * @retval #MEDIADEMUXER_ERROR_PERMISSION_DENIED Permission denied
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @retval #MEDIADEMUXER_ERROR_INVALID_PATH Invalid path
  * @pre The media muxer state will be #MEDIADEMUXER_STATE_IDLE by calling mediademuxer_create() function.
  * */
@@ -148,6 +150,7 @@ int mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_IDLE.
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_READY.
  * @see mediademuxer_set_data_source()
@@ -163,6 +166,7 @@ int mediademuxer_prepare(mediademuxer_h demuxer);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_READY.
  * @see mediademuxer_prepare()
  * @see mediademuxer_select_track()
@@ -178,6 +182,7 @@ int mediademuxer_get_track_count(mediademuxer_h demuxer, int *count);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_READY.
  * @see mediademuxer_get_track_count()
  * @see mediademuxer_start()
@@ -193,6 +198,7 @@ int mediademuxer_select_track(mediademuxer_h demuxer, int track_index);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_READY.
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_DEMUXING.
  * @see mediademuxer_prepare()
@@ -213,6 +219,7 @@ int mediademuxer_start(mediademuxer_h demuxer);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state must be set to #MEDIADEMUXER_STATE_DEMUXING by calling
  *      mediademuxer_start() or set to #MEDIADEMUXER_STATE_READY by calling mediademuxer_prepare().
  * @see mediademuxer_get_track_count()
@@ -235,6 +242,7 @@ int mediademuxer_get_track_info(mediademuxer_h demuxer, int track_index, media_f
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_DEMUXING.
  * @see mediademuxer_start()
  * @see mediademuxer_get_track_info()
@@ -255,6 +263,7 @@ int mediademuxer_read_sample(mediademuxer_h demuxer, int track_index, media_pack
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
 * @pre The media demuxer state should be #MEDIADEMUXER_STATE_DEMUXING.
  * @see mediademuxer_read_sample()
  * @see mediademuxer_stop()
@@ -270,6 +279,7 @@ int mediademuxer_seek(mediademuxer_h demuxer, int64_t pos);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state must be set to #MEDIADEMUXER_STATE_DEMUXING by calling
  *      mediademuxer_read_sample() or set to #MEDIADEMUXER_STATE_READY by calling mediademuxer_select_track().
  * @see mediademuxer_select_track()
@@ -286,6 +296,7 @@ int mediademuxer_unselect_track(mediademuxer_h demuxer, int track_index);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state must be set to #MEDIADEMUXER_STATE_DEMUXING.
  * @post The media demuxer state will be in  #MEDIADEMUXER_READY.
  * @see mediademuxer_start()
@@ -302,6 +313,7 @@ int mediademuxer_stop(mediademuxer_h demuxer);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_READY.
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_IDLE.
  * @see mediademuxer_prepare()
@@ -316,6 +328,7 @@ int mediademuxer_unprepare(mediademuxer_h demuxer);
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
+ * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre Create a media demuxer handle by calling mediademuxer_create() function.
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_NONE.
  * @see mediademuxer_create()
@@ -338,13 +351,6 @@ int mediademuxer_get_state(mediademuxer_h demuxer, mediademuxer_state *state);
 
 /**
  * @brief Registers an error callback function to be invoked when an error occurs.
- * @details Following error codes can be delivered.
- *          #MEDIADEMUXER_ERROR_INVALID_OPERATION,
- *          #MEDIADEMUXER_ERROR_NOT_SUPPORTED,
- *          #MEDIADEMUXER_ERROR_INVALID_PATH,
- *          #MEDIADEMUXER_ERROR_RESOURCE_LIMIT,
- *          #MEDIADEMUXER_ERROR_SEEK_FAILED,
- *          #MEDIADEMUXER_ERROR_DRM_NOT_PERMITTED
  * @since_tizen 3.0
  * @param[in] demuxer   The media demuxer handle
  * @param[in] callback  Callback function pointer
@@ -354,6 +360,7 @@ int mediademuxer_get_state(mediademuxer_h demuxer, mediademuxer_state *state);
  * @return @c 0 on success, otherwise a negative error value
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
  * @pre Create a media demuxer handle by calling mediademuxer_create() function.
  * @post mediademuxer_error_cb() will be invoked.
  * @see mediademuxer_unset_error_cb()
@@ -368,6 +375,7 @@ int mediademuxer_set_error_cb(mediademuxer_h demuxer, mediademuxer_error_cb call
  * @return @c 0 on success, otherwise a negative error value
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
  * @see mediademuxer_error_cb()
  * */
 int mediademuxer_unset_error_cb(mediademuxer_h demuxer);
@@ -383,6 +391,7 @@ int mediademuxer_unset_error_cb(mediademuxer_h demuxer);
  * @return @c 0 on success, otherwise a negative error value
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
  * @pre Create a media demuxer handle by calling mediademuxer_create() function.
  * @post mediademuxer_eos_cb() will be invoked.
  * @see mediademuxer_unset_eos_cb()
@@ -397,6 +406,7 @@ int mediademuxer_set_eos_cb(mediademuxer_h demuxer, mediademuxer_eos_cb callback
  * @return @c 0 on success, otherwise a negative error value
  * @retval #MEDIADEMUXER_ERROR_NONE Successful
  * @retval #MEDIADEMUXER_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
  * @see mediademuxer_eos_cb()
  * */
 int mediademuxer_unset_eos_cb(mediademuxer_h demuxer);
