@@ -91,6 +91,11 @@ int mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 	handle = (mediademuxer_s *)(demuxer);
 	if (handle && path && handle->demux_state == MEDIADEMUXER_IDLE) {
 		ret = md_set_data_source((MMHandleType) (handle->md_handle), path);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)", __FUNCTION__,
+				MEDIADEMUXER_ERROR_INVALID_PATH);
+			return MEDIADEMUXER_ERROR_INVALID_PATH;
+		}
 	} else {
 		if (!path) {
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
@@ -110,7 +115,7 @@ int mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 int mediademuxer_prepare(mediademuxer_h demuxer)
 {
 	MD_I("mediademuxer_prepare\n");
-	mediademuxer_error_e ret;
+	mediademuxer_error_e ret = MEDIADEMUXER_ERROR_NONE;
 	DEMUXER_INSTANCE_CHECK(demuxer);
 	mediademuxer_s *handle;
 	handle = (mediademuxer_s *)(demuxer);
@@ -344,7 +349,7 @@ int mediademuxer_destroy(mediademuxer_h demuxer)
 int mediademuxer_get_state(mediademuxer_h demuxer, mediademuxer_state *state)
 {
 	MD_I("mediademuxer_get_state\n");
-	int ret = MEDIADEMUXER_ERROR_NONE;
+	mediademuxer_error_e ret = MEDIADEMUXER_ERROR_NONE;
 	DEMUXER_INSTANCE_CHECK(demuxer);
 	mediademuxer_s *handle = (mediademuxer_s *)(demuxer);
 	if (state != NULL) {
