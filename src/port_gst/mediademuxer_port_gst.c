@@ -238,7 +238,8 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 		return MD_ERROR;
 	}
 	gst_bin_add_many(GST_BIN(pipeline), temp->appsink, NULL);
-	gst_app_sink_set_max_buffers((GstAppSink *) temp->appsink, MAX_APP_BUFFER);
+	gst_app_sink_set_max_buffers((GstAppSink *) temp->appsink, (guint) 0);
+	gst_app_sink_set_drop((GstAppSink *) temp->appsink, true);
 	MEDIADEMUXER_SET_STATE(temp->appsink, GST_STATE_PAUSED, ERROR);
 	apppad = gst_element_get_static_pad(temp->appsink, "sink");
 	if (!apppad) {
