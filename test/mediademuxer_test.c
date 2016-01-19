@@ -826,7 +826,7 @@ static void display_sub_basic()
 	g_print("\n");
 	g_print("===========================================================================\n");
 	g_print("                     media demuxer test\n");
-	g_print(" SELECT : c -> (s) -> p -> (goto submenu) -> d -> q \n");
+	g_print(" SELECT : c -> (s) -> e -> p -> (goto submenu) -> d -> q \n");
 	g_print("---------------------------------------------------------------------------\n");
 	g_print("c. Create \t");
 	g_print("s. Set callback \t");
@@ -929,7 +929,10 @@ static void interpret(char *cmd)
 					g_menu_state = CURRENT_STATUS_SET_DATA;
 				} else {
 					g_print("test_mediademuxer_prepare failed \n");
-					g_menu_state = CURRENT_STATUS_FILENAME;
+					if (ret == MEDIADEMUXER_ERROR_INVALID_OPERATION)
+						g_menu_state = CURRENT_STATUS_MAINMENU;
+					else
+						g_menu_state = CURRENT_STATUS_FILENAME;
 				}
 			} else {
 				g_menu_state = CURRENT_STATUS_FILENAME;

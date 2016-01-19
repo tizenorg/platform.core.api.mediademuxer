@@ -117,7 +117,7 @@ int mediademuxer_prepare(mediademuxer_h demuxer)
 	DEMUXER_INSTANCE_CHECK(demuxer);
 	mediademuxer_s *handle;
 	handle = (mediademuxer_s *)(demuxer);
-	if (handle && handle->demux_state == MEDIADEMUXER_IDLE) {
+	if (handle && handle->demux_state == MEDIADEMUXER_IDLE && handle->eos_cb != NULL) {
 		ret = md_prepare((MMHandleType) (handle->md_handle));
 		if (ret != MEDIADEMUXER_ERROR_NONE) {
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
@@ -128,6 +128,8 @@ int mediademuxer_prepare(mediademuxer_h demuxer)
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_IDLE)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
+		if (handle->eos_cb == NULL)
+			MD_E("EOS callback is not set\n");
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
 			__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
