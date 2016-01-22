@@ -40,7 +40,7 @@ typedef enum {
 	MD_MEMORY_ALLOCED = -16,	/**< codec has got memory and can decode one frame */
 	MD_COURRPTED_INI = -17,	/**< value in the ini file is not valid */
 	MD_ERROR_FILE_NOT_FOUND = -18,
-	MD_EOS,	/** read sample reached end of stream */
+	MD_EOS = -19,	/** read sample reached end of stream */
 } md_ret_e;
 
 #define MD_ERROR_CLASS              0x80000000		/**< Definition of number describing error group */

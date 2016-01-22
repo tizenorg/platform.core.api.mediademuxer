@@ -231,6 +231,7 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 	temp->name = name;
 	temp->caps_string = gst_caps_to_string(temp->caps);
 	temp->next = NULL;
+	temp->format = NULL;
 	temp->appsink = gst_element_factory_make("appsink", NULL);
 	if (!temp->appsink) {
 		MD_E("factory not able to make appsink");
@@ -976,7 +977,23 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 		temp = temp->next;
 		count++;
 	}
-
+	if (temp->format != NULL) {
+		ret = media_format_ref(temp->format);
+		if (ret != MEDIA_FORMAT_ERROR_NONE) {
+			MD_E("Mediaformat reference count increment failed. returned %d\n", ret);
+			ret = MD_INTERNAL_ERROR;
+			goto ERROR;
+		}
+		ret = media_format_make_writable(temp->format, format);	/* copy the content */
+		if (ret != MEDIA_FORMAT_ERROR_NONE) {
+			MD_E("Mediaformat create copy failed. returned %d\n", ret);
+			media_format_unref(temp->format);
+			ret = MD_INTERNAL_ERROR;
+			goto ERROR;
+		}
+		MEDIADEMUXER_FLEAVE();
+		return ret;
+	}
 	ret = media_format_create(&(temp->format));
 	if (ret != MEDIA_FORMAT_ERROR_NONE) {
 		MD_E("Mediaformat creation failed. returned %d\n", ret);
