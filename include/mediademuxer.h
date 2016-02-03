@@ -148,6 +148,7 @@ int mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path);
  * @retval #MEDIADEMUXER_ERROR_INVALID_STATE Invalid state
  * @retval #MEDIADEMUXER_ERROR_INVALID_OPERATION Invalid Operation
  * @pre The media demuxer state should be #MEDIADEMUXER_STATE_IDLE.
+ * @pre mediademuxer_set_error_cb should be called before mediademuxer_prepare().
  * @post The media demuxer state will be #MEDIADEMUXER_STATE_READY.
  * @see mediademuxer_set_data_source()
  * @see mediademuxer_unprepare()
