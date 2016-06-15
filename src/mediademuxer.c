@@ -123,8 +123,9 @@ int mediademuxer_prepare(mediademuxer_h demuxer)
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
 				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
-		} else
+		} else {
 			handle->demux_state = MEDIADEMUXER_READY;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_IDLE)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -198,8 +199,9 @@ int mediademuxer_start(mediademuxer_h demuxer)
 			MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
 				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
-		} else
+		} else {
 			handle->demux_state = MEDIADEMUXER_DEMUXING;
+		}
 	} else {
 		if (handle->demux_state != MEDIADEMUXER_READY)
 			return MEDIADEMUXER_ERROR_INVALID_STATE;
@@ -380,21 +382,21 @@ int mediademuxer_destroy(mediademuxer_h demuxer)
 				__FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 			return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 		} else {
-			MD_E("[CoreAPI][%s] destroy handle : %p", __FUNCTION__,
-			     handle);
+			MD_E("[CoreAPI][%s] destroy handle : %p", __FUNCTION__, handle);
+			handle->demux_state = MEDIADEMUXER_NONE;
+			g_free(handle);
+			handle = NULL;
 		}
 	} else {
 		MD_E("[CoreAPI][%s] DEMUXER_ERROR_INVALID_OPERATION(0x%08x)",
 				 __FUNCTION__, MEDIADEMUXER_ERROR_INVALID_OPERATION);
 		return MEDIADEMUXER_ERROR_INVALID_OPERATION;
 	}
-	handle->demux_state = MEDIADEMUXER_NONE;
 	return MEDIADEMUXER_ERROR_NONE;
 }
 
 int mediademuxer_get_state(mediademuxer_h demuxer, mediademuxer_state *state)
 {
-	MD_I("mediademuxer_get_state\n");
 	mediademuxer_error_e ret = MEDIADEMUXER_ERROR_NONE;
 	DEMUXER_INSTANCE_CHECK(demuxer);
 	mediademuxer_s *handle = (mediademuxer_s *)(demuxer);
