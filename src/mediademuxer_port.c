@@ -259,17 +259,20 @@ int _md_util_parse(MMHandleType demuxer, const char *type)
 	/*Set media_type depending upon the header of string else consider using file protocol */
 	if (new_demuxer->uri_src) {
 		MD_L("new_demuxer->uri_src deallocating %p\n", new_demuxer->uri_src);
-		free(new_demuxer->uri_src);
+		g_free(new_demuxer->uri_src);
+		new_demuxer->uri_src = NULL;
 	}
 	new_demuxer->uri_src_media_type = __md_util_media_type(&media_type_string);
 	if (new_demuxer->uri_src_media_type != MEDIADEMUXER_SRC_INVALID) {
+		if (new_demuxer->uri_src)
+			g_free(new_demuxer->uri_src);
 		new_demuxer->uri_src = media_type_string;
 		MD_L("uri:%s\n uri_type:%d\n", new_demuxer->uri_src,
 		     new_demuxer->uri_src_media_type);
 	} else {
 		MD_E("Error while setiing source\n");
 		MD_E("deallocating media_type_string %p\n", media_type_string);
-		free(media_type_string);
+		g_free(media_type_string);
 		goto ERROR;
 	}
 	MEDIADEMUXER_FLEAVE();

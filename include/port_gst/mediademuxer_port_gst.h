@@ -88,7 +88,7 @@ typedef struct _mdgst_handle_t {
 	GstElement *demux;
 	GstElement *fakesink;
 	gulong signal_handoff;
-	gint bus_whatch_id;
+	gint bus_watch_id;
 	bool is_valid_container;
 	track_info info;
 	int state_change_timeout;
