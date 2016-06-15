@@ -180,6 +180,10 @@ void __gst_free_stuct(track **head)
 			MD_I("deallocate GST_PAD %p\n", temp->pad);
 			gst_object_unref(temp->pad);
 		} */
+		if (temp->caps) {
+			MD_I("deallocate GST_PAD caps_  %p\n", temp->caps);
+			gst_caps_unref(temp->caps);
+		}
 		if (temp->name) {
 			MD_I("deallocate GST_PAD name  %p\n", temp->name);
 			g_free(temp->name);
@@ -189,11 +193,10 @@ void __gst_free_stuct(track **head)
 			     temp->caps_string);
 			g_free(temp->caps_string);
 		}
-		if (temp->caps) {
-			MD_I("deallocate GST_PAD caps_  %p\n", temp->caps);
-			gst_caps_unref(temp->caps);
+		if (temp->format) {
+			MD_I("unref media_format  %p\n", temp->format);
+			media_format_unref(temp->format);
 		}
-
 		if (temp->next) {
 			track *next = temp->next;
 			MD_I("deallocate memory %p\n", temp);
@@ -286,12 +289,17 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 			prev = prev->next;
 		prev->next = temp;
 	}
-	gst_object_unref(apppad);
+	if (apppad)
+		gst_object_unref(apppad);
+	if (parse_sink_pad)
+		gst_object_unref(parse_sink_pad);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
 	if (apppad)
 		gst_object_unref(apppad);
+	if (parse_sink_pad)
+		gst_object_unref(parse_sink_pad);
 	__gst_free_stuct(head);
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR;
@@ -447,10 +455,31 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 		/* link queue with aacparse */
 		MEDIADEMUXER_LINK_PAD(queue_srcpad, aud_pad, ERROR);
 	} else {
-	MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
+		MEDIADEMUXER_LINK_PAD(pad, aud_pad, ERROR);
 	}
 	if (adif_queue)
 		MEDIADEMUXER_SET_STATE(adif_queue, GST_STATE_PAUSED, ERROR);
+
+	trck = head_track->head;
+	while (trck != NULL && aud_srcpad != trck->pad)
+		trck = trck->next;
+
+	if (trck != NULL) {
+		if (trck->caps)
+			gst_caps_unref(trck->caps);
+		trck->caps = caps;
+		if (trck->caps_string)
+			g_free(trck->caps_string);
+		trck->caps_string = gst_caps_to_string(trck->caps);
+		MD_I("caps set to %s\n", trck->caps_string);
+		if (trck->name)
+			g_free(trck->name);
+		g_strlcpy(name, "audio", strlen(name));
+		trck->name = name;
+	}
+	(head_track->num_audio_track)++;
+
+	/* unref pads */
 	if (pad)
 		gst_object_unref(pad);
 	if (aud_pad)
@@ -464,17 +493,6 @@ static int __gst_create_audio_only_pipeline(gpointer data,  GstCaps *caps)
 	if (aud_srcpad)
 		gst_object_unref(aud_srcpad);
 
-	trck = head_track->head;
-	while (trck != NULL && aud_srcpad != trck->pad)
-		trck = trck->next;
-	if (trck != NULL) {
-		trck->caps = caps;
-		trck->caps_string = gst_caps_to_string(trck->caps);
-		MD_I("caps set to %s\n", trck->caps_string);
-		g_strlcpy(name, "audio", strlen(name));
-		trck->name = name;
-	}
-	(head_track->num_audio_track)++;
 	__gst_no_more_pad(gst_handle->demux, data);
 	g_free(type);
 	MEDIADEMUXER_FLEAVE();
@@ -659,8 +677,9 @@ static int _gst_create_pipeline(mdgst_handle_t *gst_handle, char *uri)
 
 	/* connect signals, bus watcher */
 	bus = gst_pipeline_get_bus(GST_PIPELINE(gst_handle->pipeline));
-	gst_handle->bus_whatch_id = gst_bus_add_watch(bus, __gst_bus_call, gst_handle);
-	gst_object_unref(bus);
+	gst_handle->bus_watch_id = gst_bus_add_watch(bus, __gst_bus_call, gst_handle);
+	gst_handle->thread_default = g_main_context_get_thread_default();
+	gst_object_unref(GST_OBJECT(bus));
 
 	/* set pipeline state to PAUSED */
 	MEDIADEMUXER_SET_STATE(gst_handle->pipeline, GST_STATE_PAUSED, ERROR);
@@ -1025,7 +1044,6 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 		ret = MD_INTERNAL_ERROR;
 		goto ERROR;
 	}
-
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
@@ -1376,6 +1394,15 @@ static int gst_demuxer_unprepare(MMHandleType pHandle)
 	mdgst_handle_t *gst_handle = (mdgst_handle_t *) pHandle;
 
 	_gst_clear_struct(gst_handle);
+	if (gst_handle->bus_watch_id) {
+		GSource *source = NULL;
+		source = g_main_context_find_source_by_id(gst_handle->thread_default, gst_handle->bus_watch_id);
+		if (source) {
+			g_source_destroy(source);
+			LOGD("Deallocation bus watch id");
+		}
+	}
+
 	MD_I("gst_demuxer_stop pipeine %p\n", gst_handle->pipeline);
 	if (_md_gst_destroy_pipeline(gst_handle->pipeline) != MD_ERROR_NONE) {
 		ret = MD_ERROR;

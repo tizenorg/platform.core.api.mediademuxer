@@ -390,6 +390,10 @@ void *_fetch_audio_data(void *ptr)
 {
 	int ret = MEDIADEMUXER_ERROR_NONE;
 	int *status = (int *)g_malloc(sizeof(int) * 1);
+	if (!status) {
+		g_print("Fail malloc fetch audio data retur status value\n");
+		return NULL;
+	}
 	media_packet_h audbuf;
 	int count = 0;
 	uint64_t buf_size = 0;
@@ -583,6 +587,10 @@ void *_fetch_video_data(void *ptr)
 {
 	int ret = MEDIADEMUXER_ERROR_NONE;
 	int *status = (int *)g_malloc(sizeof(int) * 1);
+	if (!status) {
+		g_print("Fail malloc fetch video data retur status value\n");
+		return NULL;
+	}
 	media_packet_h vidbuf;
 	int count = 0;
 	uint64_t buf_size = 0;
