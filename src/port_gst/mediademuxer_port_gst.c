@@ -217,6 +217,8 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 {
 	MEDIADEMUXER_FENTER();
 	GstPad *apppad = NULL;
+	GstPad *queue_sink_pad = NULL;
+	GstPad *queue_src_pad = NULL;
 	GstCaps *outcaps = NULL;
 	GstPad *parse_sink_pad = NULL;
 	GstElement *parse_element = NULL;
@@ -235,16 +237,37 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 	temp->caps_string = gst_caps_to_string(temp->caps);
 	temp->next = NULL;
 	temp->format = NULL;
+	temp->queue = gst_element_factory_make("queue", NULL);
+	if (!temp->queue) {
+		MD_E("factory not able to make queue");
+		__gst_free_stuct(head);
+		return MD_ERROR;
+	}
 	temp->appsink = gst_element_factory_make("appsink", NULL);
 	if (!temp->appsink) {
 		MD_E("factory not able to make appsink");
 		__gst_free_stuct(head);
 		return MD_ERROR;
 	}
-	gst_bin_add_many(GST_BIN(pipeline), temp->appsink, NULL);
+	gst_bin_add_many(GST_BIN(pipeline), temp->queue, temp->appsink, NULL);
 	gst_app_sink_set_max_buffers((GstAppSink *) temp->appsink, (guint) 0);
 	gst_app_sink_set_drop((GstAppSink *) temp->appsink, true);
+	MEDIADEMUXER_SET_STATE(temp->queue, GST_STATE_PAUSED, ERROR);
 	MEDIADEMUXER_SET_STATE(temp->appsink, GST_STATE_PAUSED, ERROR);
+	queue_sink_pad = gst_element_get_static_pad(temp->queue, "sink");
+	if (!queue_sink_pad) {
+		MD_E("queue_sink_pad of appsink not avaible");
+		__gst_free_stuct(head);
+		return MD_ERROR;
+	}
+	MEDIADEMUXER_LINK_PAD(pad, queue_sink_pad, ERROR);
+
+	queue_src_pad = gst_element_get_static_pad(temp->queue, "src");
+	if (!queue_src_pad) {
+		MD_E("queue_src_pad of appsink not avaible");
+		__gst_free_stuct(head);
+		return MD_ERROR;
+	}
 	apppad = gst_element_get_static_pad(temp->appsink, "sink");
 	if (!apppad) {
 		MD_E("sink pad of appsink not avaible");
@@ -272,13 +295,13 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 		}
 
 		/* Link demuxer pad with sink pad of parse element */
-		MEDIADEMUXER_LINK_PAD(pad, parse_sink_pad, ERROR);
+		MEDIADEMUXER_LINK_PAD(queue_src_pad, parse_sink_pad, ERROR);
 
 		outcaps = gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING, "byte-stream", NULL);
 		gst_element_link_filtered(parse_element, temp->appsink, outcaps);
 		gst_caps_unref(outcaps);
 	} else {
-		MEDIADEMUXER_LINK_PAD(pad, apppad, ERROR);
+		MEDIADEMUXER_LINK_PAD(queue_src_pad, apppad, ERROR);
 	}
 	/* gst_pad_link(pad, fpad) */
 	if (*head == NULL) {
@@ -289,6 +312,10 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 			prev = prev->next;
 		prev->next = temp;
 	}
+	if (queue_sink_pad)
+		gst_object_unref(queue_sink_pad);
+	if (queue_src_pad)
+		gst_object_unref(queue_src_pad);
 	if (apppad)
 		gst_object_unref(apppad);
 	if (parse_sink_pad)
@@ -296,6 +323,10 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 	MEDIADEMUXER_FLEAVE();
 	return MD_ERROR_NONE;
 ERROR:
+	if (queue_sink_pad)
+		gst_object_unref(queue_sink_pad);
+	if (queue_src_pad)
+		gst_object_unref(queue_src_pad);
 	if (apppad)
 		gst_object_unref(apppad);
 	if (parse_sink_pad)
@@ -327,6 +358,11 @@ static void __gst_on_pad_added(GstElement *element, GstPad *pad, gpointer data)
 	tmp = head_track->head;
 	while (tmp->next)
 		tmp = tmp->next;
+	if (!tmp || !tmp->caps_string) {
+		MD_I("trak or trak caps_string is NULL\n");
+		MEDIADEMUXER_FLEAVE();
+		return;
+	}
 	if (tmp->caps_string[0] == 'v') {
 		MD_I("found Video Pad\n");
 		(head_track->num_video_track)++;
@@ -777,6 +813,29 @@ ERROR:
 	return ret;
 }
 
+static int _gst_unlink_unselected_track(track *temp, int index)
+{
+	MEDIADEMUXER_FENTER();
+	int ret = MD_ERROR_NONE;
+	int count = 0;
+	GstPad *queue_sink_pad = NULL;
+	while (count != index) {
+		temp = temp->next;
+		count++;
+	}
+	queue_sink_pad = gst_element_get_static_pad(temp->queue, "sink");
+	if (!queue_sink_pad) {
+		MD_E("queue_sink_pad of appsink not avaible\n");
+		return MD_ERROR;
+	}
+	if (gst_pad_unlink(temp->pad, queue_sink_pad) != TRUE)
+		MD_W("demuxer is already unlinked from queue for track %d\n", index);
+
+	gst_object_unref(queue_sink_pad);
+	MEDIADEMUXER_FLEAVE();
+	return ret;
+}
+
 static int gst_demuxer_start(MMHandleType pHandle)
 {
 	MEDIADEMUXER_FENTER();
@@ -792,6 +851,14 @@ static int gst_demuxer_start(MMHandleType pHandle)
 		if (gst_handle->selected_tracks[indx] ==  false)
 			_gst_demuxer_unset(pHandle, indx);
 		*/
+		if (gst_handle->selected_tracks[indx] != true) {
+			if (_gst_unlink_unselected_track((((mdgst_handle_t *) pHandle)->info).head, indx) != MD_ERROR_NONE) {
+				MD_E("Failed to unlink unselected tracks\n");
+				ret = MD_INTERNAL_ERROR;
+				goto ERROR;
+			}
+		}
+
 	}
 
 	track_info *head_track = &(gst_handle->info);
@@ -827,6 +894,31 @@ ERROR:
 	return ret;
 }
 
+int _set_mime_text(media_format_h format, track *head)
+{
+	MEDIADEMUXER_FENTER();
+	int ret = MD_ERROR_NONE;
+	GstStructure *struc = NULL;
+	struc = gst_caps_get_structure(head->caps, 0);
+	if (!struc) {
+		MD_E("cannot get structure from caps.\n");
+		goto ERROR;
+	}
+	if (gst_structure_has_name(struc, "text/x-raw")) {
+		if (media_format_set_text_mime(format, MEDIA_FORMAT_TEXT_MP4))
+			goto ERROR;
+	} else {
+		MD_I("Text mime not supported so far\n");
+		goto ERROR;
+	}
+
+	MEDIADEMUXER_FLEAVE();
+	return ret;
+ERROR:
+	MEDIADEMUXER_FLEAVE();
+	return MD_ERROR;
+}
+
 int _set_mime_video(media_format_h format, track *head)
 {
 	MEDIADEMUXER_FENTER();
@@ -844,14 +936,16 @@ int _set_mime_video(media_format_h format, track *head)
 	}
 	if (gst_structure_has_name(struc, "video/x-h264")) {
 		const gchar *version = gst_structure_get_string(struc, "stream-format");
-		if (strncmp(version, "avc", 3) == 0)
+		if (strncmp(version, "avc", 3) == 0) {
 			mime_type = MEDIA_FORMAT_H264_SP;
-		else {
+		} else {
 			MD_W("Video mime (%s) not supported so far\n", gst_structure_get_name(struc));
 			goto ERROR;
 		}
 	} else if (gst_structure_has_name(struc, "video/x-h263")) {
 		mime_type = MEDIA_FORMAT_H263;
+	} else if (gst_structure_has_name(struc, "video/mpeg")) {
+		mime_type = MEDIA_FORMAT_MPEG4_SP;
 	} else {
 		MD_W("Video mime (%s) not supported so far\n", gst_structure_get_name(struc));
 		goto ERROR;
@@ -862,10 +956,14 @@ int _set_mime_video(media_format_h format, track *head)
 	}
 	gst_structure_get_int(struc, "width", &src_width);
 	gst_structure_get_int(struc, "height", &src_height);
-	if (media_format_set_video_width(format, src_width))
+	if (media_format_set_video_width(format, src_width)) {
+		MD_E("Unable to set video width\n");
 		goto ERROR;
-	if (media_format_set_video_height(format, src_height))
-			goto ERROR;
+	}
+	if (media_format_set_video_height(format, src_height)) {
+		MD_E("Unable to set video height\n");
+		goto ERROR;
+	}
 	gst_structure_get_fraction(struc, "framerate",  &frame_rate_numerator, &frame_rate_denominator);
 	if (media_format_set_video_frame_rate(format, frame_rate_numerator)) {
 		MD_E("Unable to set video frame rate\n");
@@ -1028,8 +1126,12 @@ static int gst_demuxer_get_track_info(MMHandleType pHandle,
 	} else if (temp->caps_string[0] == 'v') {
 		MD_I("Setting for Video \n");
 		_set_mime_video(temp->format, temp);
-	} else
-		MD_W("Not supported so far (except audio and video)\n");
+	} else if (temp->caps_string[0] == 't') {
+		MD_I("Setting for Subtitle\n");
+		_set_mime_text(temp->format, temp);
+	} else {
+		MD_W("Not supported so far (except audio, video and subtitle)\n");
+	}
 
 	ret = media_format_ref(temp->format);	/* increment the ref to retain the original content */
 	if (ret != MEDIA_FORMAT_ERROR_NONE) {
