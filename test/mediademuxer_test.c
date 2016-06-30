@@ -49,10 +49,13 @@ enum {
 mediademuxer_h demuxer = NULL;
 media_format_mimetype_e v_mime;
 media_format_mimetype_e a_mime;
+media_format_mimetype_e t_mime;
+media_format_text_type_e t_type;
 int g_menu_state = CURRENT_STATUS_MAINMENU;
 int num_tracks = 0;
 int aud_track = -1;
 int vid_track = -1;
+int txt_track = -1;
 int w;
 int h;
 int channel = 0;
@@ -61,6 +64,7 @@ int bit = 0;
 bool is_adts = 0;
 bool vid_eos_track = 0;
 bool aud_eos_track = 0;
+bool text_eos_track = 0;
 
 /*-----------------------------------------------------------------------
 |    DEBUG DEFINITIONS                                                            |
@@ -112,6 +116,7 @@ bool aud_eos_track = 0;
 #if DEMUXER_OUTPUT_DUMP
 FILE *fp_audio_out = NULL;
 FILE *fp_video_out = NULL;
+FILE *fp_text_out = NULL;
 bool validate_dump = false;
 
 #define ADTS_HEADER_SIZE            7
@@ -166,15 +171,13 @@ void generate_header_aac_adts(unsigned char *buffer, int packetLen)
 	/* Make ADTS header */
 	buffer[0] = (char)0xFF;
 	buffer[1] = (char)0xF1;
-	buffer[2] = (char)(((profile-1)<<6) + (freqIdx<<2) +(chanCfg>>2));
-	buffer[3] = (char)(((chanCfg&3)<<6) + (packetLen>>11));
-	buffer[4] = (char)((packetLen&0x7FF) >> 3);
-	buffer[5] = (char)(((packetLen&7)<<5) + 0x1F);
+	buffer[2] = (char)(((profile - 1) << 6) + (freqIdx << 2) + (chanCfg >> 2));
+	buffer[3] = (char)(((chanCfg & 3) << 6) + (packetLen >> 11));
+	buffer[4] = (char)((packetLen & 0x7FF) >> 3);
+	buffer[5] = (char)(((packetLen & 7) << 5) + 0x1F);
 	buffer[6] = (char)0xFC;
 }
 #endif
-
-
 
 /*-----------------------------------------------------------------------
 |    LOCAL FUNCTION                                                                 |
@@ -198,8 +201,10 @@ int test_mediademuxer_set_data_source(mediademuxer_h demuxer, const char *path)
 	if (fp_audio_out != NULL) {
 		validate_dump = true;
 		fp_video_out = fopen("/opt/usr/dump_video.out", "wb");
-	} else
+		fp_text_out = fopen("/opt/usr/dump_text.out", "wb");
+	} else {
 		g_print("Error - Cannot open file for file dump, Please chek root\n");
+	}
 #endif
 
 	ret = mediademuxer_set_data_source(demuxer, path);
@@ -268,6 +273,10 @@ int test_mediademuxer_get_track_info()
 				if (a_mime == MEDIA_FORMAT_AAC_LC)
 					media_format_get_audio_aac_type(g_media_format, &is_adts);
 				aud_track = track;
+			} else if (media_format_get_text_info(g_media_format, &t_mime, &t_type) == MEDIA_FORMAT_ERROR_NONE) {
+					g_print("media_format_get_text_info is sucess!\n");
+					g_print("\t\t[media_format_get_text]mime:%x, type:%x\n", t_mime, t_type);
+					txt_track = track;
 			} else {
 					g_print("Not Supported YET\n");
 			}
@@ -653,9 +662,51 @@ void *_fetch_video_data(void *ptr)
 	return (void *)status;
 }
 
+void *_fetch_text_data(void *ptr)
+{
+	int ret = MEDIADEMUXER_ERROR_NONE;
+	int *status = (int *)g_malloc(sizeof(int) * 1);
+	if (!status) {
+		g_print("Fail malloc fetch video data retur status value\n");
+		return NULL;
+	}
+	media_packet_h txtbuf;
+	int count = 0;
+	uint64_t buf_size = 0;
+	void *data = NULL;
+
+	*status = -1;
+	g_print("text Data function\n");
+	g_print("Text track number is :%d\n", txt_track);
+	while (1) {
+		ret = mediademuxer_read_sample(demuxer, txt_track, &txtbuf);
+		if (ret != MEDIADEMUXER_ERROR_NONE) {
+			g_print("Error (%d) return of mediademuxer_read_sample()\n", ret);
+			pthread_exit(NULL);
+		}
+		if (text_eos_track)
+			break;
+		count++;
+		media_packet_get_buffer_size(txtbuf, &buf_size);
+		media_packet_get_buffer_data_ptr(txtbuf, &data);
+		g_print("Text Read Count::[%4d] frame - get_buffer_size = %"PRIu64"\n", count, buf_size);
+#if DEMUXER_OUTPUT_DUMP
+		if (validate_dump) {
+			if (data != NULL)
+				fwrite(data, 1, buf_size, fp_text_out);
+			else
+				g_print("DUMP : write(text data) fail for NULL\n");
+		}
+#endif
+	}
+	g_print("EOS return of mediademuxer_read_sample()\n");
+	*status = 0;
+	return (void *)status;
+}
+
 int test_mediademuxer_read_sample()
 {
-	pthread_t thread[2];
+	pthread_t thread[3];
 	pthread_attr_t attr;
 	/* Initialize and set thread detached attribute */
 	pthread_attr_init(&attr);
@@ -667,6 +718,10 @@ int test_mediademuxer_read_sample()
 	if (aud_track != -1) {
 		g_print("In main: creating thread  for audio\n");
 		pthread_create(&thread[1], &attr, _fetch_audio_data, NULL);
+	}
+	if (txt_track != -1) {
+		g_print("In main: creating thread  for text\n");
+		pthread_create(&thread[2], &attr, _fetch_text_data, NULL);
 	}
 	pthread_attr_destroy(&attr);
 	return 0;
@@ -738,8 +793,9 @@ int test_mediademuxer_get_state()
 			g_print("Mediademuxer_state = DEMUXING\n");
 		else
 			g_print("Mediademuxer_state = NOT SUPPORT STATE\n");
-	} else
+	} else {
 		g_print("Mediademuxer_state call failed\n");
+	}
 	return 0;
 }
 
@@ -755,6 +811,8 @@ void app_eos_cb(int track_index, void *user_data)
 		vid_eos_track = true;
 	else if (track_index == aud_track)
 		aud_eos_track = true;
+	else if (track_index == txt_track)
+		text_eos_track = true;
 	else
 		g_print("EOS for invalid track number\n");
 }
@@ -943,6 +1001,8 @@ static void interpret(char *cmd)
 						g_menu_state = CURRENT_STATUS_FILENAME;
 				}
 			} else {
+				if (ret == MEDIADEMUXER_ERROR_INVALID_PATH)
+					g_print("Invalid path, file does not exist\n");
 				g_menu_state = CURRENT_STATUS_FILENAME;
 			}
 			break;
@@ -989,8 +1049,9 @@ static void interpret(char *cmd)
 					g_print("UNKNOW COMMAND\n");
 				else
 					g_print("UNKNOW COMMAND\n");
-			} else
+			} else {
 				g_print("UNKNOW COMMAND\n");
+			}
 			break;
 		}
 	default:

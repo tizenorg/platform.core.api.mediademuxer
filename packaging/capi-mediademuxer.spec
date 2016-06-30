@@ -1,6 +1,6 @@
 Name:       capi-mediademuxer
 Summary:    A Media Demuxer library in Tizen Native API
-Version:    0.1.1
+Version:    0.1.2
 Release:    1
 Group:      Multimedia/API
 License:    Apache-2.0
