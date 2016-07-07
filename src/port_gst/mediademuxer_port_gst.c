@@ -1495,6 +1495,8 @@ int _md_gst_destroy_pipeline(GstElement *pipeline)
 	int ret = MD_ERROR_NONE;
 	if (pipeline)
 		MEDIADEMUXER_SET_STATE(pipeline, GST_STATE_NULL, ERROR);
+	if (pipeline)
+		gst_object_unref(GST_OBJECT(pipeline));
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
