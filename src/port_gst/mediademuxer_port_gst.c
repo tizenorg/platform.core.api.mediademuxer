@@ -1277,12 +1277,6 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		goto ERROR;
 	}
 
-	if (media_packet_create_alloc(atrack->format, NULL, NULL, &mediabuf)) {
-		MD_E("media_packet_create_alloc failed\n");
-		ret = MD_ERROR;
-		goto ERROR;
-	}
-
 	if (indx != track_indx) {
 		MD_E("Invalid track Index\n");
 		ret = MD_ERROR_INVALID_ARGUMENT;
@@ -1296,12 +1290,20 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 		if (gst_app_sink_is_eos((GstAppSink *) sink)) {
 			MD_W("End of stream (EOS) reached, triggering the eos callback\n");
 			ret = MD_ERROR_NONE;
+			*outbuf = NULL;
 			__gst_eos_callback(track_indx, demuxer);
 			return ret;
 		} else {
 			MD_E("gst_demuxer_read_sample failed\n");
+			*outbuf = NULL;
 			ret = MD_ERROR_UNKNOWN;
 		}
+	}
+
+	if (media_packet_create_alloc(atrack->format, NULL, NULL, &mediabuf)) {
+		MD_E("media_packet_create_alloc failed\n");
+		ret = MD_ERROR;
+		goto ERROR;
 	}
 
 	GstBuffer *buffer = gst_sample_get_buffer(sample);
@@ -1337,6 +1339,9 @@ static int gst_demuxer_read_sample(MMHandleType pHandle,
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 ERROR:
+	if (mediabuf)
+		media_packet_destroy(mediabuf);
+	*outbuf = NULL;
 	MEDIADEMUXER_FLEAVE();
 	return ret;
 }
