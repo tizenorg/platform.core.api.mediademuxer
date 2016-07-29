@@ -291,7 +291,10 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 			MD_E("factory not able to make h264parse");
 			goto ERROR;
 		}
-		gst_bin_add_many(GST_BIN(pipeline), parse_element, NULL);
+		if (!gst_bin_add(GST_BIN(pipeline), parse_element)) {
+			MD_E("fail add h264parse in pipeline");
+			goto ERROR;
+		}
 		parse_sink_pad = gst_element_get_static_pad(parse_element, "sink");
 		if (!parse_sink_pad) {
 			gst_object_unref(parse_element);
@@ -307,6 +310,30 @@ int __gst_add_track_info(GstPad *pad, gchar *name, track **head,
 		outcaps = gst_caps_new_simple("video/x-h264", "stream-format", G_TYPE_STRING, "byte-stream", NULL);
 		gst_element_link_filtered(parse_element, temp->appsink, outcaps);
 		gst_caps_unref(outcaps);
+	} else if (strstr(name, "video") && strstr(temp->caps_string, "mpeg")) {
+		parse_element = gst_element_factory_make("mpeg4videoparse", NULL);
+		if (!parse_element) {
+			MD_E("factory not able to make mpeg4videoparse");
+			goto ERROR;
+		}
+		if (!gst_bin_add(GST_BIN(pipeline), parse_element)) {
+			MD_E("fail add mpeg4videoparse in pipeline");
+			goto ERROR;
+		}
+		parse_sink_pad = gst_element_get_static_pad(parse_element, "sink");
+		if (!parse_sink_pad) {
+			gst_object_unref(parse_element);
+			MD_E("sink pad of mpeg4videoparse not available");
+			goto ERROR;
+		}
+
+		g_object_set(G_OBJECT(parse_element), "config-interval", 1, NULL);
+
+		MEDIADEMUXER_SET_STATE(parse_element, GST_STATE_PAUSED, ERROR);
+
+		/* Link demuxer pad with sink pad of parse element */
+		MEDIADEMUXER_LINK_PAD(queue_src_pad, parse_sink_pad, ERROR);
+		gst_element_link(parse_element, temp->appsink);
 	} else {
 		MEDIADEMUXER_LINK_PAD(queue_src_pad, apppad, ERROR);
 	}
