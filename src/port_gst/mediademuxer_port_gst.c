@@ -66,7 +66,7 @@ static media_port_demuxer_ops def_demux_ops = {
 	.set_eos_cb = gst_set_eos_cb,
 };
 
-int gst_port_register(media_port_demuxer_ops *pOps)
+int gst_mediademxer_port_register(media_port_demuxer_ops *pOps)
 {
 	MEDIADEMUXER_FENTER();
 	int ret = MD_ERROR_NONE;

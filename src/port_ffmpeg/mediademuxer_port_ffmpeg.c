@@ -43,7 +43,7 @@ static media_port_demuxer_ops def_demux_ops = {
 	.get_data = ffmpeg_demuxer_get_data,
 };
 
-int ffmpeg_port_register(media_port_demuxer_ops *pOps)
+int ffmpeg_mediademxer_port_register(media_port_demuxer_ops *pOps)
 {
 	int ret = MD_ERROR_NONE;
 	MEDIADEMUXER_FENTER();

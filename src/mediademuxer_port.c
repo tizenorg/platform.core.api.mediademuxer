@@ -36,9 +36,9 @@
 #define MAX_ERR_LEN 256
 
 /* function type */
-extern int gst_port_register(media_port_demuxer_ops *pOps);
-extern int ffmpeg_port_register(media_port_demuxer_ops *pOps);
-extern int custom_port_register(media_port_demuxer_ops *pOps);
+extern int gst_mediademxer_port_register(media_port_demuxer_ops *pOps);
+extern int ffmpeg_mediademxer_port_register(media_port_demuxer_ops *pOps);
+extern int custom_mediademxer_port_register(media_port_demuxer_ops *pOps);
 int __md_util_exist_file_path(const char *file_path);
 bool __md_util_is_sdp_file(const char *path);
 mediademuxer_src_type __md_util_media_type(char **uri);
@@ -48,11 +48,11 @@ int _md_util_parse(MMHandleType demuxer, const char *type);
   * Sequence of functions should be same as the port enumeration
   * "port_mode" in mm_demuxer_ini.h file
   */
-typedef int (*register_port)(media_port_demuxer_ops *);
-register_port register_port_func[] = {
-	&gst_port_register,
-	&ffmpeg_port_register,
-	&custom_port_register
+typedef int (*register_port_demuxer)(media_port_demuxer_ops *);
+register_port_demuxer register_port_demuxer_func[] = {
+	&gst_mediademxer_port_register,
+	&ffmpeg_mediademxer_port_register,
+	&custom_mediademxer_port_register
 };
 
 int md_create(MMHandleType *demuxer)
@@ -82,7 +82,7 @@ int md_create(MMHandleType *demuxer)
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
 									MD_COURRPTED_INI, "can't load ini");
 
-	register_port_func[new_demuxer->ini.port_type](pOps);
+	register_port_demuxer_func[new_demuxer->ini.port_type](pOps);
 	result = pOps->init(&new_demuxer->mdport_handle);
 	MEDIADEMUXER_CHECK_SET_AND_PRINT(result, MD_ERROR_NONE, result,
 									MD_NOT_INITIALIZED, "md_create failed");

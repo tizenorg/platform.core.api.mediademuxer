@@ -43,7 +43,7 @@ static media_port_demuxer_ops def_demux_ops = {
 	.get_data = custom_demuxer_get_data,
 };
 
-int custom_port_register(media_port_demuxer_ops *pOps)
+int custom_mediademxer_port_register(media_port_demuxer_ops *pOps)
 {
 	int ret = MD_ERROR_NONE;
 	MEDIADEMUXER_FENTER();
